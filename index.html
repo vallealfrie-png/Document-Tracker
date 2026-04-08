@@ -37,10 +37,12 @@
             padding: 8px; 
             border: 1px solid #ddd; 
             display: inline-block;
+            min-height: 116px; /* Prevents layout shift */
+            min-width: 116px;
         }
         #project-id-text { font-size: 11pt; font-weight: bold; color: #1a73ba; margin-top: 5px; font-family: monospace; }
 
-        /* Main Image Area - STRICT AUTOFIT */
+        /* Main Image Area - STRICT AUTOFIT TO PREVENT LEAKING */
         .main-content-area {
             flex: 1;
             margin: 0 20px;
@@ -50,8 +52,17 @@
             justify-content: center;
             background-color: #fafafa;
             overflow: hidden; 
+            position: relative;
         }
-        #img-preview { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
+        
+        /* Object-fit contain ensures image stays within boundaries */
+        #img-preview { 
+            max-width: 100%; 
+            max-height: 100%; 
+            object-fit: contain; 
+            display: none; 
+        }
+
         .upload-hint { color: #999; cursor: pointer; text-align: center; font-size: 14pt; }
 
         /* Bottom Section */
@@ -83,9 +94,11 @@
 
         /* UI Controls */
         .controls { margin-bottom: 10px; display: flex; gap: 10px; }
-        button { padding: 12px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
+        button { padding: 12px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
         .btn-save { background: #1a73ba; }
+        .btn-save:hover { background: #155a8a; }
         .btn-print { background: #007b43; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
 
         @media print {
             .controls, .upload-hint { display: none; }
@@ -99,8 +112,8 @@
 <body>
 
     <div class="controls">
-        <button class="btn-save" onclick="saveToSupabase()">1. SAVE TO DATABASE</button>
-        <button class="btn-print" onclick="window.print()">2. PRINT</button>
+        <button class="btn-save" id="save-btn" onclick="saveToSupabase()">1. SAVE TO DATABASE</button>
+        <button class="btn-print" onclick="window.print()">2. PRINT DOCUMENT</button>
     </div>
 
     <div class="page">
@@ -115,7 +128,8 @@
 
         <div class="main-content-area" onclick="document.getElementById('file-input').click()">
             <div id="hint" class="upload-hint">
-                <strong>[ CLICK TO UPLOAD PROJECT PHOTO ]</strong>
+                <strong>[ CLICK TO UPLOAD PROJECT PHOTO ]</strong><br>
+                <span style="font-size: 10pt;">Image will auto-fit inside this box</span>
             </div>
             <img id="img-preview">
             <input type="file" id="file-input" hidden accept="image/*" onchange="previewFile(event)">
@@ -123,8 +137,8 @@
 
         <div class="bottom-container">
             <div class="info-bar">
-                <div><strong>PROJECT:</strong> <input type="text" id="proj_name" placeholder="Project Title"></div>
-                <div><strong>DEPARTMENT:</strong> <input type="text" id="dept_name" placeholder="Department"></div>
+                <div><strong>PROJECT:</strong> <input type="text" id="proj_name" placeholder="Enter Project Name"></div>
+                <div><strong>DEPARTMENT:</strong> <input type="text" id="dept_name" placeholder="Enter Department"></div>
                 <div style="font-size: 9pt; text-align: right;"><strong>EMAILED:</strong> 04 | 08 | 2026</div>
             </div>
 
@@ -159,11 +173,12 @@
 
         // --- 2. INITIALIZE QR & ID IMMEDIATELY ---
         function init() {
+            // Generate Random 5-digit Hex
             const hex = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
             currentProjectNo = `MKTG-${hex}`;
             document.getElementById('project-id-text').innerText = `ID: ${currentProjectNo}`;
 
-            // Generate QR
+            // Generate QR Code targeting the verification link
             const qrElement = document.getElementById("qrcode");
             qrElement.innerHTML = "";
             new QRCode(qrElement, {
@@ -174,7 +189,7 @@
             });
         }
 
-        // Run on load
+        // Run as soon as page is ready
         window.onload = init;
 
         // --- 3. IMAGE HANDLER ---
@@ -198,21 +213,22 @@
             const file = document.getElementById('file-input').files[0];
             if (!file) { alert("Please upload a project image first!"); return; }
 
-            const btn = document.querySelector('.btn-save');
-            btn.innerText = "UPLOADING...";
-            btn.disabled = true;
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.innerText = "UPLOADING...";
+            saveBtn.disabled = true;
 
             try {
-                // Upload to Storage
+                // Upload to 'project-images' bucket
                 const { data: storageData, error: sErr } = await _supabase.storage
                     .from('project-images')
                     .upload(`${currentProjectNo}.png`, file);
 
                 if (sErr) throw sErr;
 
+                // Get Public URL
                 const { data: { publicUrl } } = _supabase.storage.from('project-images').getPublicUrl(`${currentProjectNo}.png`);
 
-                // Insert to Database
+                // Insert into 'projects' table
                 const { error: dbErr } = await _supabase.from('projects').insert([{
                     project_no: currentProjectNo,
                     project_name: document.getElementById('proj_name').value,
@@ -231,12 +247,12 @@
 
                 if (dbErr) throw dbErr;
 
-                alert("Success! Project " + currentProjectNo + " saved.");
+                alert("Successfully saved Project: " + currentProjectNo);
             } catch (err) {
                 alert("Error: " + err.message);
             } finally {
-                btn.innerText = "1. SAVE TO DATABASE";
-                btn.disabled = false;
+                saveBtn.innerText = "1. SAVE TO DATABASE";
+                saveBtn.disabled = false;
             }
         }
     </script>
