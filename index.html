@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Clean Landscape Signatory</title>
+    <title>PHMC Signatory Card - Final</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         /* Reset and Print setup */
@@ -16,50 +16,47 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            overflow: hidden; /* Prevents leaking to 2nd page */
+            overflow: hidden; 
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
-        /* Top Branding Bar */
+        /* Branding Section - Background removed as requested */
         .hospital-branding-header {
-            background-color: #007b43;
-            height: 80px;
-            width: 250px;
+            height: 100px;
+            width: 300px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 10px;
+            justify-content: flex-start;
+            padding: 20px;
         }
         .hospital-branding-header img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
         /* QR Code Top Right */
         #qrcode {
             position: absolute;
-            top: 15px;
-            right: 15px;
-            background: white;
+            top: 20px;
+            right: 20px;
             padding: 5px;
         }
 
         /* Center Image Area - Auto-fits content */
         .main-content-area {
             flex-grow: 1;
-            margin: 10px;
-            border: 2px dashed #ddd;
+            margin: 0 20px;
+            border: 1px dashed #ddd;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             overflow: hidden;
-            background-color: #fafafa;
         }
         .main-content-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .upload-hint { color: #aaa; font-style: italic; cursor: pointer; }
+        .upload-hint { color: #aaa; font-style: italic; cursor: pointer; text-align: center; }
 
         /* Bottom Metadata & Signatory Section */
         .bottom-container {
             width: 100%;
-            border-top: 3px solid #1a73ba;
+            margin-top: 10px;
         }
 
         /* Info Row */
@@ -67,11 +64,11 @@
             background-color: #1a73ba;
             color: white;
             display: grid;
-            grid-template-columns: 1fr 1fr 200px;
-            padding: 10px 20px;
+            grid-template-columns: 1.5fr 1fr 200px;
+            padding: 12px 20px;
             align-items: center;
         }
-        .info-bar input { background: transparent; border: none; color: white; border-bottom: 1px solid rgba(255,255,255,0.3); outline: none; width: 80%; padding: 2px; }
+        .info-bar input { background: transparent; border: none; color: white; border-bottom: 1px solid rgba(255,255,255,0.5); outline: none; width: 75%; padding: 2px; font-size: 11pt; }
 
         /* Signatory Boxes */
         .signatory-grid {
@@ -81,14 +78,16 @@
         }
         .sig-box {
             border: 0.5px solid #1a73ba;
-            height: 120px;
-            padding: 15px;
+            height: 130px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
+            justify-content: space-between;
         }
-        .input-name { border: none; border-bottom: 1.5px solid #000; font-weight: bold; text-align: center; width: 100%; outline: none; margin-bottom: 5px; font-size: 11pt; }
-        .input-title { border: none; text-align: center; width: 100%; outline: none; font-size: 9pt; color: #444; }
+        .sig-label { font-size: 8pt; font-weight: bold; color: #1a73ba; text-transform: uppercase; }
+        .sig-inputs { display: flex; flex-direction: column; align-items: center; }
+        .input-name { border: none; border-bottom: 1px solid #000; font-weight: bold; text-align: center; width: 90%; outline: none; margin-bottom: 3px; font-size: 11pt; }
+        .input-title { border: none; text-align: center; width: 90%; outline: none; font-size: 9pt; color: #555; }
 
         /* Controls */
         .controls { margin-bottom: 10px; }
@@ -98,7 +97,7 @@
             body { background: white; padding: 0; margin: 0; }
             .controls { display: none; }
             .page { box-shadow: none; border: none; width: 11in; height: 8.5in; }
-            .main-content-area { border: none; background: transparent; }
+            .main-content-area { border: none; }
             .upload-hint { display: none; }
             @page { size: landscape; margin: 0; }
         }
@@ -107,7 +106,7 @@
 <body>
 
     <div class="controls">
-        <button onclick="window.print()">PRINT PROJECT CARD</button>
+        <button onclick="window.print()">PRINT DOCUMENT</button>
     </div>
 
     <div class="page">
@@ -118,7 +117,10 @@
         <div id="qrcode"></div>
 
         <div class="main-content-area" onclick="document.getElementById('file-input').click()">
-            <div class="upload-hint" id="hint">Click to upload Project Image (Auto-fits to space)</div>
+            <div class="upload-hint" id="hint">
+                <strong>[ CLICK TO UPLOAD PROJECT IMAGE ]</strong><br>
+                <span>Image will automatically fit this area</span>
+            </div>
             <img id="img-preview" src="">
             <input type="file" id="file-input" hidden accept="image/*" onchange="previewFile(event)">
         </div>
@@ -126,26 +128,38 @@
         <div class="bottom-container">
             <div class="info-bar">
                 <div><strong>PROJECT:</strong> <input type="text" placeholder="Enter Project Name"></div>
-                <div><strong>CREATED BY:</strong> <input type="text" value="Department/Center"></div>
-                <div style="font-size: 9pt;"><strong>DATE:</strong> 04 | 08 | 2026</div>
+                <div><strong>DEPARTMENT:</strong> <input type="text" placeholder="Enter Department Name"></div>
+                <div style="font-size: 9pt; text-align: right;"><strong>EMAILED:</strong> 04 | 08 | 2026</div>
             </div>
 
             <div class="signatory-grid">
                 <div class="sig-box">
-                    <input type="text" class="input-name" placeholder="NAME">
-                    <input type="text" class="input-title" placeholder="Position">
+                    <span class="sig-label">Created By:</span>
+                    <div class="sig-inputs">
+                        <input type="text" class="input-name" placeholder="Name">
+                        <input type="text" class="input-title" placeholder="Position">
+                    </div>
                 </div>
                 <div class="sig-box">
-                    <input type="text" class="input-name" placeholder="NAME">
-                    <input type="text" class="input-title" placeholder="Position">
+                    <span class="sig-label">Supervisor/Manager:</span>
+                    <div class="sig-inputs">
+                        <input type="text" class="input-name" placeholder="Name">
+                        <input type="text" class="input-title" placeholder="Position">
+                    </div>
                 </div>
                 <div class="sig-box">
-                    <input type="text" class="input-name" placeholder="NAME">
-                    <input type="text" class="input-title" placeholder="Position">
+                    <span class="sig-label">Department Head:</span>
+                    <div class="sig-inputs">
+                        <input type="text" class="input-name" placeholder="Name">
+                        <input type="text" class="input-title" placeholder="Position">
+                    </div>
                 </div>
                 <div class="sig-box">
-                    <input type="text" class="input-name" placeholder="NAME">
-                    <input type="text" class="input-title" placeholder="Position">
+                    <span class="sig-label">Approved By:</span>
+                    <div class="sig-inputs">
+                        <input type="text" class="input-name" placeholder="Name">
+                        <input type="text" class="input-title" placeholder="Position">
+                    </div>
                 </div>
             </div>
         </div>
@@ -154,9 +168,9 @@
     <script>
         // Generate QR
         new QRCode(document.getElementById("qrcode"), {
-            text: "PHMC-VERIFY-2026",
-            width: 80,
-            height: 80
+            text: "PHMC-DOC-2026",
+            width: 90,
+            height: 90
         });
 
         // Handle Image
