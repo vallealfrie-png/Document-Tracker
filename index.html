@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PHMC Project Management System</title>
+    <title>PHMC Project Management System - Fixed</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
         body { font-family: 'Helvetica', Arial, sans-serif; background: #525659; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
 
+        /* The Container: Fixed to 1 page landscape */
         .page {
             background: white;
             width: 11in;
@@ -16,49 +18,64 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            overflow: hidden; 
+            overflow: hidden; /* Prevents content from leaking to page 2 */
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
-        /* Header / Logo Section */
+        /* Logo Area */
         .hospital-branding-header {
             height: 100px;
             width: 300px;
             display: flex;
             align-items: center;
-            justify-content: flex-start;
             padding: 20px;
         }
         .hospital-branding-header img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        /* QR Code & ID Display */
+        /* QR Code & ID - Forced Visibility */
         .qr-container {
             position: absolute;
             top: 20px;
             right: 20px;
+            z-index: 999;
             text-align: center;
         }
-        #qrcode { background: white; padding: 5px; border: 1px solid #ddd; margin-bottom: 5px; }
-        #project-id-text { font-size: 10pt; font-weight: bold; color: #1a73ba; font-family: monospace; }
+        #qrcode { 
+            background: white; 
+            padding: 5px; 
+            border: 1px solid #ddd; 
+            width: 100px; 
+            height: 100px; 
+            display: block;
+        }
+        #project-id-text { font-size: 10pt; font-weight: bold; color: #1a73ba; margin-top: 5px; display: block; }
 
-        /* Main Image Area */
+        /* Main Image Area - FIXED TO PREVENT LEAKING */
         .main-content-area {
-            flex-grow: 1;
+            flex: 1; /* Takes up remaining space between header and footer */
             margin: 0 20px;
-            border: 1px dashed #ccc;
+            border: 2px dashed #eee;
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #fcfcfc;
-            cursor: pointer;
+            background-color: #fafafa;
+            overflow: hidden; /* Contains the image */
+            position: relative;
         }
-        .main-content-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .upload-hint { color: #999; font-style: italic; text-align: center; }
+        
+        /* This ensures the image NEVER exceeds the box boundaries */
+        #img-preview { 
+            max-width: 100%; 
+            max-height: 100%; 
+            object-fit: contain; 
+            display: none; 
+        }
+
+        .upload-hint { color: #999; cursor: pointer; text-align: center; }
 
         /* Bottom Section */
-        .bottom-container { width: 100%; margin-top: 10px; }
+        .bottom-container { width: 100%; margin-top: auto; }
 
-        /* Blue Info Bar */
         .info-bar {
             background-color: #1a73ba;
             color: white;
@@ -67,9 +84,8 @@
             padding: 12px 20px;
             align-items: center;
         }
-        .info-bar input { background: transparent; border: none; color: white; border-bottom: 1px solid rgba(255,255,255,0.4); outline: none; width: 70%; font-size: 11pt; padding: 2px; }
+        .info-bar input { background: transparent; border: none; color: white; border-bottom: 1px solid rgba(255,255,255,0.4); outline: none; width: 70%; font-size: 11pt; }
 
-        /* Signatory Grid */
         .signatory-grid { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
         .sig-box {
             border: 0.5px solid #1a73ba;
@@ -81,12 +97,11 @@
         }
         .sig-label { font-size: 8pt; font-weight: bold; color: #1a73ba; text-transform: uppercase; }
         .sig-inputs { display: flex; flex-direction: column; align-items: center; }
-        .input-name { border: none; border-bottom: 1px solid #000; font-weight: bold; text-align: center; width: 90%; outline: none; font-size: 11pt; margin-bottom: 3px; }
+        .input-name { border: none; border-bottom: 1px solid #000; font-weight: bold; text-align: center; width: 90%; outline: none; font-size: 11pt; }
         .input-title { border: none; text-align: center; width: 90%; outline: none; font-size: 9pt; color: #555; }
 
-        /* UI Controls */
         .controls { margin-bottom: 10px; display: flex; gap: 10px; }
-        .btn { padding: 10px 25px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
+        button { padding: 10px 25px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
         .btn-save { background: #1a73ba; }
         .btn-print { background: #007b43; }
 
@@ -94,7 +109,7 @@
             .controls { display: none; }
             body { background: white; padding: 0; }
             .page { box-shadow: none; border: none; width: 11in; height: 8.5in; }
-            .main-content-area { border: none; background: transparent; }
+            .main-content-area { border: none; }
             .upload-hint { display: none; }
             @page { size: landscape; margin: 0; }
         }
@@ -103,8 +118,8 @@
 <body>
 
     <div class="controls">
-        <button class="btn btn-save" onclick="saveToSupabase()">SAVE PROJECT</button>
-        <button class="btn btn-print" onclick="window.print()">PRINT</button>
+        <button class="btn-save" onclick="saveToSupabase()">SAVE PROJECT</button>
+        <button class="btn-print" onclick="window.print()">PRINT</button>
     </div>
 
     <div class="page">
@@ -119,10 +134,10 @@
 
         <div class="main-content-area" onclick="document.getElementById('file-input').click()">
             <div id="hint" class="upload-hint">
-                <strong>CLICK TO UPLOAD PROJECT IMAGE</strong><br>
-                (Auto-fits to space)
+                <strong>[ CLICK TO UPLOAD PROJECT IMAGE ]</strong><br>
+                <span>Image will auto-fit inside this box</span>
             </div>
-            <img id="img-preview" src="">
+            <img id="img-preview">
             <input type="file" id="file-input" hidden accept="image/*" onchange="previewFile(event)">
         </div>
 
@@ -136,84 +151,74 @@
             <div class="signatory-grid">
                 <div class="sig-box">
                     <span class="sig-label">Created By:</span>
-                    <div class="sig-inputs">
-                        <input type="text" id="n1" class="input-name" placeholder="Name">
-                        <input type="text" id="p1" class="input-title" placeholder="Position">
-                    </div>
+                    <div class="sig-inputs"><input type="text" id="n1" class="input-name" placeholder="Name"><input type="text" id="p1" class="input-title" placeholder="Position"></div>
                 </div>
                 <div class="sig-box">
                     <span class="sig-label">Supervisor/Manager:</span>
-                    <div class="sig-inputs">
-                        <input type="text" id="n2" class="input-name" placeholder="Name">
-                        <input type="text" id="p2" class="input-title" placeholder="Position">
-                    </div>
+                    <div class="sig-inputs"><input type="text" id="n2" class="input-name" placeholder="Name"><input type="text" id="p2" class="input-title" placeholder="Position"></div>
                 </div>
                 <div class="sig-box">
                     <span class="sig-label">Department Head:</span>
-                    <div class="sig-inputs">
-                        <input type="text" id="n3" class="input-name" placeholder="Name">
-                        <input type="text" id="p3" class="input-title" placeholder="Position">
-                    </div>
+                    <div class="sig-inputs"><input type="text" id="n3" class="input-name" placeholder="Name"><input type="text" id="p3" class="input-title" placeholder="Position"></div>
                 </div>
                 <div class="sig-box">
                     <span class="sig-label">Approved By:</span>
-                    <div class="sig-inputs">
-                        <input type="text" id="n4" class="input-name" placeholder="Name">
-                        <input type="text" id="p4" class="input-title" placeholder="Position">
-                    </div>
+                    <div class="sig-inputs"><input type="text" id="n4" class="input-name" placeholder="Name"><input type="text" id="p4" class="input-title" placeholder="Position"></div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // 1. Config Supabase
+        // Supabase Init
         const _supabase = supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
 
-        // 2. Generate Hex ID (MKTG-5DigitHex)
+        // Hex ID Generation
         const hexID = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
         const projectID = `MKTG-${hexID}`;
         document.getElementById('project-id-text').innerText = `ID: ${projectID}`;
 
-        // 3. Initialize QR Code
-        const verifyURL = `https://your-site.com/verify?id=${projectID}`;
-        const qrcode = new QRCode(document.getElementById("qrcode"), {
-            text: verifyURL,
-            width: 90,
-            height: 90
-        });
+        // QR Generation (Must use window.onload to ensure div exists)
+        window.onload = function() {
+            new QRCode(document.getElementById("qrcode"), {
+                text: `https://your-domain.com/verify?id=${projectID}`,
+                width: 100,
+                height: 100
+            });
+        };
 
-        // 4. Image Preview
+        // Fixed Image Preview Logic
         function previewFile(event) {
             const output = document.getElementById('img-preview');
             const hint = document.getElementById('hint');
-            output.src = URL.createObjectURL(event.target.files[0]);
-            output.onload = () => { hint.style.display = 'none'; }
+            const reader = new FileReader();
+            
+            reader.onload = function(){
+                output.src = reader.result;
+                output.style.display = 'block'; // Show the image
+                hint.style.display = 'none';    // Hide the text
+            }
+            reader.readAsDataURL(event.target.files[0]);
         }
 
-        // 5. Save Logic
         async function saveToSupabase() {
             const file = document.getElementById('file-input').files[0];
-            let uploadedUrl = '';
+            if (!file) { alert("Please upload an image first."); return; }
 
-            if (!file) { alert("Please upload a project image first."); return; }
-
-            // Upload Image to Storage
             const { data: uploadData, error: uploadError } = await _supabase.storage
                 .from('project-images')
                 .upload(`${projectID}.png`, file);
 
             if (uploadError) { alert("Upload error: " + uploadError.message); return; }
 
-            uploadedUrl = _supabase.storage.from('project-images').getPublicUrl(`${projectID}.png`).data.publicUrl;
+            const publicUrl = _supabase.storage.from('project-images').getPublicUrl(`${projectID}.png`).data.publicUrl;
 
-            // Insert Data to Table
             const { error: dbError } = await _supabase.from('projects').insert([{
                 project_no: projectID,
                 project_name: document.getElementById('proj_name').value,
                 department: document.getElementById('dept_name').value,
                 emailed_date: "04/08/2026",
-                image_url: uploadedUrl,
+                image_url: publicUrl,
                 created_by_name: document.getElementById('n1').value,
                 created_by_pos: document.getElementById('p1').value,
                 supervisor_name: document.getElementById('n2').value,
@@ -224,8 +229,8 @@
                 approved_by_pos: document.getElementById('p4').value
             }]);
 
-            if (dbError) alert("Database error: " + dbError.message);
-            else alert("Project " + projectID + " successfully saved!");
+            if (dbError) alert("DB Error: " + dbError.message);
+            else alert("Project " + projectID + " Saved!");
         }
     </script>
 </body>
