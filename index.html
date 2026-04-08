@@ -2,213 +2,173 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Signatory Project Template</title>
+    <title>Clean Landscape Signatory</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: 'Helvetica', Arial, sans-serif; background: #525659; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        
-        /* Landscape setup */
+        /* Reset and Print setup */
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+        body { font-family: 'Helvetica', Arial, sans-serif; background: #525659; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+
         .page {
             background: white;
             width: 11in;
             height: 8.5in;
-            padding: 0;
-            position: relative;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            position: relative;
+            overflow: hidden; /* Prevents leaking to 2nd page */
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
-        /* Top Blue Bar */
-        .header-blue-bar {
-            background-color: #1a73ba; /* Matching the blue in your image */
-            color: white;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .project-label { font-size: 18pt; font-weight: bold; }
-        .date-section { font-size: 10pt; display: flex; gap: 10px; align-items: center; }
-
-        /* Secondary Header Row */
-        .sub-header {
-            display: grid;
-            grid-template-columns: 200px 1fr 250px;
-            border-bottom: 2px solid #1a73ba;
-        }
-
-        .created-by-box {
-            padding: 5px 10px;
-            font-size: 8pt;
-            font-weight: bold;
-            border-right: 2px solid #1a73ba;
-        }
-
-        .dept-box {
-            padding: 10px;
-            font-size: 14pt;
-            font-weight: bold;
-            border-right: 2px solid #1a73ba;
-        }
-
-        /* Hospital Logo Green Section */
-        .hospital-branding {
+        /* Top Branding Bar */
+        .hospital-branding-header {
             background-color: #007b43;
-            padding: 10px;
+            height: 80px;
+            width: 250px;
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 200px;
-            height: 80px;
+            padding: 10px;
         }
+        .hospital-branding-header img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        .hospital-branding img { max-width: 100%; max-height: 100%; }
-
-        /* QR Code positioning (Top Right) */
+        /* QR Code Top Right */
         #qrcode {
             position: absolute;
-            top: 60px;
-            right: 20px;
-            border: 5px solid white;
+            top: 15px;
+            right: 15px;
+            background: white;
+            padding: 5px;
         }
 
-        /* Image Upload Area */
-        .upload-container {
+        /* Center Image Area - Auto-fits content */
+        .main-content-area {
             flex-grow: 1;
-            border: 1px dashed #ccc;
             margin: 10px;
+            border: 2px dashed #ddd;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            background-color: #fafafa;
         }
-        .upload-container img { max-height: 100%; max-width: 100%; }
+        .main-content-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .upload-hint { color: #aaa; font-style: italic; cursor: pointer; }
 
-        /* Signatory Boxes Grid */
+        /* Bottom Metadata & Signatory Section */
+        .bottom-container {
+            width: 100%;
+            border-top: 3px solid #1a73ba;
+        }
+
+        /* Info Row */
+        .info-bar {
+            background-color: #1a73ba;
+            color: white;
+            display: grid;
+            grid-template-columns: 1fr 1fr 200px;
+            padding: 10px 20px;
+            align-items: center;
+        }
+        .info-bar input { background: transparent; border: none; color: white; border-bottom: 1px solid rgba(255,255,255,0.3); outline: none; width: 80%; padding: 2px; }
+
+        /* Signatory Boxes */
         .signatory-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            border-top: 2px solid #1a73ba;
+            width: 100%;
         }
-
         .sig-box {
-            border-right: 1px solid #1a73ba;
-            border-bottom: 1px solid #1a73ba;
-            padding: 10px;
-            height: 100px;
+            border: 0.5px solid #1a73ba;
+            height: 120px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
         }
+        .input-name { border: none; border-bottom: 1.5px solid #000; font-weight: bold; text-align: center; width: 100%; outline: none; margin-bottom: 5px; font-size: 11pt; }
+        .input-title { border: none; text-align: center; width: 100%; outline: none; font-size: 9pt; color: #444; }
 
-        .sig-box:last-child { border-right: none; }
-
-        .input-name {
-            border: none;
-            border-bottom: 1px solid #000;
-            font-weight: bold;
-            text-align: center;
-            width: 100%;
-            outline: none;
-            font-size: 11pt;
-        }
-
-        .input-title {
-            border: none;
-            text-align: center;
-            width: 100%;
-            outline: none;
-            font-size: 9pt;
-            color: #555;
-            margin-top: 4px;
-        }
-
-        /* Footer Logo */
-        .footer-logo {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: 120px;
-        }
-
+        /* Controls */
         .controls { margin-bottom: 10px; }
+        button { padding: 10px 25px; background: #007b43; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
         @media print {
-            .controls, .upload-placeholder { display: none; }
-            body { background: white; padding: 0; }
-            .page { box-shadow: none; }
-            @page { size: landscape; }
+            body { background: white; padding: 0; margin: 0; }
+            .controls { display: none; }
+            .page { box-shadow: none; border: none; width: 11in; height: 8.5in; }
+            .main-content-area { border: none; background: transparent; }
+            .upload-hint { display: none; }
+            @page { size: landscape; margin: 0; }
         }
     </style>
 </head>
 <body>
 
     <div class="controls">
-        <button onclick="window.print()" style="padding:10px 20px; background:#1a73ba; color:white; border:none; border-radius:5px; cursor:pointer;">Print Card</button>
+        <button onclick="window.print()">PRINT PROJECT CARD</button>
     </div>
 
     <div class="page">
-        <div id="qrcode"></div>
-
-        <div class="header-blue-bar">
-            <div class="project-label">PROJECT: <input type="text" style="background:transparent; border:none; color:white; font-size:18pt; width:400px; outline:none;" placeholder="TITLE HERE"></div>
-            <div class="date-section">
-                <span>FA ● EMAILED ●</span>
-                <input type="text" value="04 | 08 | 2026" style="background:white; border:none; padding:2px 5px; width:100px; text-align:center;">
-            </div>
-        </div>
-
-        <div class="sub-header">
-            <div class="created-by-box">CREATED BY :</div>
-            <div class="dept-box"><input type="text" class="editable-content" style="border:none; width:100%; outline:none;" value="Department/Center"></div>
-        </div>
-
-        <div class="hospital-branding">
+        <div class="hospital-branding-header">
             <img src="https://i.imgur.com/VbZKWAf.png" alt="PHMC Logo">
         </div>
 
-        <div class="upload-container" onclick="document.getElementById('file-input').click()">
-            <span class="upload-placeholder">Click to upload project photo</span>
-            <img id="preview" src="">
-            <input type="file" id="file-input" hidden onchange="loadFile(event)">
+        <div id="qrcode"></div>
+
+        <div class="main-content-area" onclick="document.getElementById('file-input').click()">
+            <div class="upload-hint" id="hint">Click to upload Project Image (Auto-fits to space)</div>
+            <img id="img-preview" src="">
+            <input type="file" id="file-input" hidden accept="image/*" onchange="previewFile(event)">
         </div>
 
-        <div class="signatory-grid">
-            <div class="sig-box">
-                <input type="text" class="input-name" placeholder="FULL NAME">
-                <input type="text" class="input-title" placeholder="Position / Title">
+        <div class="bottom-container">
+            <div class="info-bar">
+                <div><strong>PROJECT:</strong> <input type="text" placeholder="Enter Project Name"></div>
+                <div><strong>CREATED BY:</strong> <input type="text" value="Department/Center"></div>
+                <div style="font-size: 9pt;"><strong>DATE:</strong> 04 | 08 | 2026</div>
             </div>
-            <div class="sig-box">
-                <input type="text" class="input-name" placeholder="FULL NAME">
-                <input type="text" class="input-title" placeholder="Position / Title">
-            </div>
-            <div class="sig-box">
-                <input type="text" class="input-name" placeholder="FULL NAME">
-                <input type="text" class="input-title" placeholder="Position / Title">
-            </div>
-            <div class="sig-box">
-                <input type="text" class="input-name" placeholder="FULL NAME">
-                <input type="text" class="input-title" placeholder="Position / Title">
+
+            <div class="signatory-grid">
+                <div class="sig-box">
+                    <input type="text" class="input-name" placeholder="NAME">
+                    <input type="text" class="input-title" placeholder="Position">
+                </div>
+                <div class="sig-box">
+                    <input type="text" class="input-name" placeholder="NAME">
+                    <input type="text" class="input-title" placeholder="Position">
+                </div>
+                <div class="sig-box">
+                    <input type="text" class="input-name" placeholder="NAME">
+                    <input type="text" class="input-title" placeholder="Position">
+                </div>
+                <div class="sig-box">
+                    <input type="text" class="input-name" placeholder="NAME">
+                    <input type="text" class="input-title" placeholder="Position">
+                </div>
             </div>
         </div>
-
-        <img src="https://i.imgur.com/VbZKWAf.png" class="footer-logo">
     </div>
 
     <script>
+        // Generate QR
         new QRCode(document.getElementById("qrcode"), {
-            text: "PROJECT-VERIFY-2026",
+            text: "PHMC-VERIFY-2026",
             width: 80,
             height: 80
         });
 
-        var loadFile = function(event) {
-            var output = document.getElementById('preview');
+        // Handle Image
+        function previewFile(event) {
+            const output = document.getElementById('img-preview');
+            const hint = document.getElementById('hint');
             output.src = URL.createObjectURL(event.target.files[0]);
-            document.querySelector('.upload-placeholder').style.display = 'none';
-        };
+            output.onload = () => {
+                URL.revokeObjectURL(output.src);
+                hint.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>
