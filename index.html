@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Editable Signatory Card</title>
+    <title>Landscape Signatory Card</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
@@ -10,20 +10,37 @@
             --primary-green: #007b43;
         }
 
-        body { font-family: Arial, sans-serif; background: #525659; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #525659; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 20px; 
+        }
 
-        /* Document Container */
+        /* Landscape Orientation */
         .page {
             background: white;
-            width: 8.5in; /* Standard Letter Size */
-            min-height: 5in;
+            width: 11in; 
+            height: 8.5in;
             padding: 0.5in;
             position: relative;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
             box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* Header Styling */
+        /* QR Code Top Right */
+        #qrcode {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            z-index: 10;
+        }
+
+        /* Header Info  */
         .header {
             border-bottom: 3px solid var(--primary-green);
             margin-bottom: 20px;
@@ -35,7 +52,7 @@
             font-size: 24pt;
             font-weight: bold;
             margin: 0;
-            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .location {
@@ -44,61 +61,90 @@
             margin: 0;
         }
 
-        /* QR Code Top Right */
-        #qrcode {
-            position: absolute;
-            top: 40px;
-            right: 40px;
-        }
-
-        /* Editable Table */
+        /* Table Content  */
         .info-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-bottom: 20px;
         }
 
         .info-table td {
             border: 1px solid #000;
             padding: 10px;
-            vertical-align: top;
         }
 
         .label {
             font-weight: bold;
             font-size: 10pt;
-            width: 15%;
+            background: #f0f0f0;
         }
 
-        /* Editable Input Fields */
         .editable-content {
-            width: 95%;
+            width: 100%;
             border: none;
             font-size: 12pt;
             outline: none;
-            resize: none;
-            display: block;
+            background: transparent;
         }
 
-        .editable-content:focus { background: #fffde7; }
+        /* Image Upload Area (Center) */
+        .upload-container {
+            flex-grow: 1;
+            border: 2px dashed #ccc;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
 
-        /* UI Buttons */
+        .upload-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        #file-input { display: none; }
+
+        .upload-placeholder {
+            color: #999;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        /* Logo Lower Left */
+        .footer-logo {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 180px;
+        }
+
         .controls { margin-bottom: 20px; }
-        button { padding: 10px 20px; cursor: pointer; background: var(--primary-green); color: white; border: none; border-radius: 4px; font-weight: bold; }
+        
+        button { 
+            padding: 10px 20px; 
+            cursor: pointer; 
+            background: var(--primary-green); 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+        }
 
-        /* PRINT STYLES */
         @media print {
             body { background: white; padding: 0; }
-            .page { box-shadow: none; border: none; width: 100%; }
-            .controls { display: none; }
-            .editable-content:focus { background: transparent; }
+            .page { box-shadow: none; border: none; width: 11in; height: 8.5in; }
+            .controls, .upload-placeholder { display: none; }
+            .upload-container { border: none; }
+            @page { size: landscape; }
         }
     </style>
 </head>
 <body>
 
     <div class="controls">
-        <button onclick="window.print()">Print to PDF / Paper</button>
+        <button onclick="window.print()">Print Document</button>
     </div>
 
     <div class="page">
@@ -112,38 +158,47 @@
         <table class="info-table">
             <tr>
                 <td class="label">PROJECT:</td>
-                <td>
-                    <textarea class="editable-content" rows="2">Enter Project Name...</textarea>
-                </td>
-                <td class="label" style="width:10%">EMAILED:</td>
-                <td style="width:20%">
-                    <input type="text" class="editable-content" value="04 08 2026">
-                </td>
+                <td style="width: 50%"><input type="text" class="editable-content" placeholder="Enter Project Name"></td>
+                <td class="label">EMAILED:</td>
+                <td><input type="text" class="editable-content" value="04 08 2026"></td>
             </tr>
             <tr>
                 <td class="label">CREATED BY:</td>
-                <td colspan="3">
-                    <textarea class="editable-content">Department/Center</textarea>
-                </td>
+                <td colspan="3"><input type="text" class="editable-content" value="Department/Center"></td>
             </tr>
         </table>
+
+        <div class="upload-container" onclick="document.getElementById('file-input').click()">
+            <div class="upload-placeholder" id="placeholder-text">
+                <p>Click to upload project image or drag and drop</p>
+            </div>
+            <img id="display-image" src="" style="display:none;">
+            <input type="file" id="file-input" accept="image/*" onchange="previewImage(event)">
+        </div>
+
+        <img src="https://i.imgur.com/VbZKWAf.png" class="footer-logo" alt="Logo">
     </div>
 
     <script>
-        // Generate QR code based on the Project Name automatically
-        const qrContainer = document.getElementById("qrcode");
-        const qr = new QRCode(qrContainer, {
-            text: "VERIFICATION-ID-12345",
-            width: 90,
-            height: 90
+        // Initialize QR Code 
+        const qrcode = new QRCode(document.getElementById("qrcode"), {
+            text: "PHMC-DOC-2026",
+            width: 100,
+            height: 100
         });
 
-        // Optional: Make QR update when typing in Project field
-        const projectInput = document.querySelector('.editable-content');
-        projectInput.addEventListener('input', (e) => {
-            qr.clear();
-            qr.makeCode(e.target.value || "Empty");
-        });
+        // Image Preview Function
+        function previewImage(event) {
+            const reader = new FileReader();
+            reader.onload = function() {
+                const output = document.getElementById('display-image');
+                const placeholder = document.getElementById('placeholder-text');
+                output.src = reader.result;
+                output.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            reader.readAsDataURL(event.target.files[0]);
+        }
     </script>
 </body>
 </html>
