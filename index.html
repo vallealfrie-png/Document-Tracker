@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PHMC Real-Time Project System</title>
+    <title>PHMC Project Management System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
@@ -21,26 +21,22 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
-        /* Branding Section */
         .hospital-branding-header { height: 100px; width: 300px; display: flex; align-items: center; padding: 20px; }
         .hospital-branding-header img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        /* QR Code Container - Real Time */
+        /* QR Code Container */
         .qr-container {
             position: absolute;
             top: 20px;
             right: 20px;
             text-align: center;
+            z-index: 100;
         }
         #qrcode { 
             background: white; 
-            padding: 5px; 
-            border: 1px solid #eee; 
-            width: 110px; 
-            height: 110px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 8px; 
+            border: 1px solid #ddd; 
+            display: inline-block;
         }
         #project-id-text { font-size: 11pt; font-weight: bold; color: #1a73ba; margin-top: 5px; font-family: monospace; }
 
@@ -87,9 +83,8 @@
 
         /* UI Controls */
         .controls { margin-bottom: 10px; display: flex; gap: 10px; }
-        button { padding: 12px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        button { padding: 12px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
         .btn-save { background: #1a73ba; }
-        .btn-save:hover { background: #155a8a; }
         .btn-print { background: #007b43; }
 
         @media print {
@@ -104,8 +99,8 @@
 <body>
 
     <div class="controls">
-        <button class="btn-save" onclick="saveToSupabase()">1. SAVE TO SUPABASE</button>
-        <button class="btn-print" onclick="window.print()">2. PRINT DOCUMENT</button>
+        <button class="btn-save" onclick="saveToSupabase()">1. SAVE TO DATABASE</button>
+        <button class="btn-print" onclick="window.print()">2. PRINT</button>
     </div>
 
     <div class="page">
@@ -115,12 +110,12 @@
 
         <div class="qr-container">
             <div id="qrcode"></div>
-            <div id="project-id-text">INITIALIZING...</div>
+            <div id="project-id-text">MKTG-XXXXX</div>
         </div>
 
         <div class="main-content-area" onclick="document.getElementById('file-input').click()">
             <div id="hint" class="upload-hint">
-                <strong>[ CLICK TO UPLOAD PROJECT IMAGE ]</strong>
+                <strong>[ CLICK TO UPLOAD PROJECT PHOTO ]</strong>
             </div>
             <img id="img-preview">
             <input type="file" id="file-input" hidden accept="image/*" onchange="previewFile(event)">
@@ -128,8 +123,8 @@
 
         <div class="bottom-container">
             <div class="info-bar">
-                <div><strong>PROJECT:</strong> <input type="text" id="proj_name" placeholder="Type Project Name..."></div>
-                <div><strong>DEPARTMENT:</strong> <input type="text" id="dept_name" placeholder="Type Department..."></div>
+                <div><strong>PROJECT:</strong> <input type="text" id="proj_name" placeholder="Project Title"></div>
+                <div><strong>DEPARTMENT:</strong> <input type="text" id="dept_name" placeholder="Department"></div>
                 <div style="font-size: 9pt; text-align: right;"><strong>EMAILED:</strong> 04 | 08 | 2026</div>
             </div>
 
@@ -155,81 +150,94 @@
     </div>
 
     <script>
-        // --- 1. SUPABASE CONFIG ---
-        const _supabase = supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
+        // --- 1. SUPABASE INTEGRATION ---
+        const SUPABASE_URL = 'https://tywhjkofayqhmwbpzvlg.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d2hqa29mYXlxaG13YnB6dmxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzA2ODYsImV4cCI6MjA5MTIwNjY4Nn0.F-mFKAhn5kRtAU1XOM5jMiT4-zL3P6YJ7Rtj9VGatH4';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         let currentProjectNo = "";
 
-        // --- 2. INSTANT LOADING LOGIC ---
-        // This ensures the QR and ID load the moment you open the browser
-        window.onload = function() {
-            // Generate Random 5-digit Hex
+        // --- 2. INITIALIZE QR & ID IMMEDIATELY ---
+        function init() {
             const hex = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
             currentProjectNo = `MKTG-${hex}`;
-            
-            // Update the Display ID
             document.getElementById('project-id-text').innerText = `ID: ${currentProjectNo}`;
 
-            // Generate the QR Code
-            const qrContainer = document.getElementById("qrcode");
-            qrContainer.innerHTML = ""; // Clear
-            new QRCode(qrContainer, {
-                text: `https://your-domain.com/verify?id=${currentProjectNo}`,
+            // Generate QR
+            const qrElement = document.getElementById("qrcode");
+            qrElement.innerHTML = "";
+            new QRCode(qrElement, {
+                text: `https://tywhjkofayqhmwbpzvlg.supabase.co/verify?id=${currentProjectNo}`,
                 width: 100,
                 height: 100,
                 correctLevel: QRCode.CorrectLevel.H
             });
-        };
+        }
 
-        // --- 3. IMAGE PREVIEW ---
+        // Run on load
+        window.onload = init;
+
+        // --- 3. IMAGE HANDLER ---
         function previewFile(event) {
             const output = document.getElementById('img-preview');
             const hint = document.getElementById('hint');
             const file = event.target.files[0];
-            
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = (e) => {
                     output.src = e.target.result;
                     output.style.display = 'block';
                     hint.style.display = 'none';
-                }
+                };
                 reader.readAsDataURL(file);
             }
         }
 
-        // --- 4. SUPABASE SAVE FUNCTION ---
+        // --- 4. SAVE HANDLER ---
         async function saveToSupabase() {
             const file = document.getElementById('file-input').files[0];
-            if (!file) { alert("Please upload a project photo first!"); return; }
+            if (!file) { alert("Please upload a project image first!"); return; }
 
-            // A. Upload photo to Supabase Storage
-            const { data: storageData, error: storageError } = await _supabase.storage
-                .from('project-images')
-                .upload(`${currentProjectNo}.png`, file);
+            const btn = document.querySelector('.btn-save');
+            btn.innerText = "UPLOADING...";
+            btn.disabled = true;
 
-            if (storageError) { alert("Upload error: " + storageError.message); return; }
+            try {
+                // Upload to Storage
+                const { data: storageData, error: sErr } = await _supabase.storage
+                    .from('project-images')
+                    .upload(`${currentProjectNo}.png`, file);
 
-            const publicUrl = _supabase.storage.from('project-images').getPublicUrl(`${currentProjectNo}.png`).data.publicUrl;
+                if (sErr) throw sErr;
 
-            // B. Insert project data to Table
-            const { error: dbError } = await _supabase.from('projects').insert([{
-                project_no: currentProjectNo,
-                project_name: document.getElementById('proj_name').value,
-                department: document.getElementById('dept_name').value,
-                emailed_date: "04/08/2026",
-                image_url: publicUrl,
-                created_by_name: document.getElementById('n1').value,
-                created_by_pos: document.getElementById('p1').value,
-                supervisor_name: document.getElementById('n2').value,
-                supervisor_pos: document.getElementById('p2').value,
-                dept_head_name: document.getElementById('n3').value,
-                dept_head_pos: document.getElementById('p3').value,
-                approved_by_name: document.getElementById('n4').value,
-                approved_by_pos: document.getElementById('p4').value
-            }]);
+                const { data: { publicUrl } } = _supabase.storage.from('project-images').getPublicUrl(`${currentProjectNo}.png`);
 
-            if (dbError) alert("Database save error: " + dbError.message);
-            else alert("Successfully saved Project: " + currentProjectNo);
+                // Insert to Database
+                const { error: dbErr } = await _supabase.from('projects').insert([{
+                    project_no: currentProjectNo,
+                    project_name: document.getElementById('proj_name').value,
+                    department: document.getElementById('dept_name').value,
+                    emailed_date: "04/08/2026",
+                    image_url: publicUrl,
+                    created_by_name: document.getElementById('n1').value,
+                    created_by_pos: document.getElementById('p1').value,
+                    supervisor_name: document.getElementById('n2').value,
+                    supervisor_pos: document.getElementById('p2').value,
+                    dept_head_name: document.getElementById('n3').value,
+                    dept_head_pos: document.getElementById('p3').value,
+                    approved_by_name: document.getElementById('n4').value,
+                    approved_by_pos: document.getElementById('p4').value
+                }]);
+
+                if (dbErr) throw dbErr;
+
+                alert("Success! Project " + currentProjectNo + " saved.");
+            } catch (err) {
+                alert("Error: " + err.message);
+            } finally {
+                btn.innerText = "1. SAVE TO DATABASE";
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
