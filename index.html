@@ -2,141 +2,143 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Landscape Signatory Card</title>
+    <title>Signatory Project Template</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root {
-            --primary-red: #d32f2f;
-            --primary-green: #007b43;
-        }
-
-        body { 
-            font-family: Arial, sans-serif; 
-            background: #525659; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            padding: 20px; 
-        }
-
-        /* Landscape Orientation */
+        body { font-family: 'Helvetica', Arial, sans-serif; background: #525659; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        
+        /* Landscape setup */
         .page {
             background: white;
-            width: 11in; 
+            width: 11in;
             height: 8.5in;
-            padding: 0.5in;
+            padding: 0;
             position: relative;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            box-sizing: border-box;
             display: flex;
             flex-direction: column;
-        }
-
-        /* QR Code Top Right */
-        #qrcode {
-            position: absolute;
-            top: 40px;
-            right: 40px;
-            z-index: 10;
-        }
-
-        /* Header Info  */
-        .header {
-            border-bottom: 3px solid var(--primary-green);
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-        }
-
-        .hospital-name {
-            color: var(--primary-red);
-            font-size: 24pt;
-            font-weight: bold;
-            margin: 0;
-            text-transform: uppercase;
-        }
-
-        .location {
-            font-size: 14pt;
-            font-weight: bold;
-            margin: 0;
-        }
-
-        /* Table Content  */
-        .info-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-
-        .info-table td {
-            border: 1px solid #000;
-            padding: 10px;
-        }
-
-        .label {
-            font-weight: bold;
-            font-size: 10pt;
-            background: #f0f0f0;
-        }
-
-        .editable-content {
-            width: 100%;
-            border: none;
-            font-size: 12pt;
-            outline: none;
-            background: transparent;
-        }
-
-        /* Image Upload Area (Center) */
-        .upload-container {
-            flex-grow: 1;
-            border: 2px dashed #ccc;
-            margin: 20px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
             overflow: hidden;
         }
 
-        .upload-container img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+        /* Top Blue Bar */
+        .header-blue-bar {
+            background-color: #1a73ba; /* Matching the blue in your image */
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        #file-input { display: none; }
+        .project-label { font-size: 18pt; font-weight: bold; }
+        .date-section { font-size: 10pt; display: flex; gap: 10px; align-items: center; }
 
-        .upload-placeholder {
-            color: #999;
-            text-align: center;
+        /* Secondary Header Row */
+        .sub-header {
+            display: grid;
+            grid-template-columns: 200px 1fr 250px;
+            border-bottom: 2px solid #1a73ba;
+        }
+
+        .created-by-box {
+            padding: 5px 10px;
+            font-size: 8pt;
+            font-weight: bold;
+            border-right: 2px solid #1a73ba;
+        }
+
+        .dept-box {
+            padding: 10px;
+            font-size: 14pt;
+            font-weight: bold;
+            border-right: 2px solid #1a73ba;
+        }
+
+        /* Hospital Logo Green Section */
+        .hospital-branding {
+            background-color: #007b43;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 200px;
+            height: 80px;
+        }
+
+        .hospital-branding img { max-width: 100%; max-height: 100%; }
+
+        /* QR Code positioning (Top Right) */
+        #qrcode {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            border: 5px solid white;
+        }
+
+        /* Image Upload Area */
+        .upload-container {
+            flex-grow: 1;
+            border: 1px dashed #ccc;
+            margin: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
         }
+        .upload-container img { max-height: 100%; max-width: 100%; }
 
-        /* Logo Lower Left */
+        /* Signatory Boxes Grid */
+        .signatory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border-top: 2px solid #1a73ba;
+        }
+
+        .sig-box {
+            border-right: 1px solid #1a73ba;
+            border-bottom: 1px solid #1a73ba;
+            padding: 10px;
+            height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .sig-box:last-child { border-right: none; }
+
+        .input-name {
+            border: none;
+            border-bottom: 1px solid #000;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+            outline: none;
+            font-size: 11pt;
+        }
+
+        .input-title {
+            border: none;
+            text-align: center;
+            width: 100%;
+            outline: none;
+            font-size: 9pt;
+            color: #555;
+            margin-top: 4px;
+        }
+
+        /* Footer Logo */
         .footer-logo {
             position: absolute;
-            bottom: 40px;
-            left: 40px;
-            width: 180px;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
         }
 
-        .controls { margin-bottom: 20px; }
-        
-        button { 
-            padding: 10px 20px; 
-            cursor: pointer; 
-            background: var(--primary-green); 
-            color: white; 
-            border: none; 
-            border-radius: 4px; 
-        }
-
+        .controls { margin-bottom: 10px; }
         @media print {
-            body { background: white; padding: 0; }
-            .page { box-shadow: none; border: none; width: 11in; height: 8.5in; }
             .controls, .upload-placeholder { display: none; }
-            .upload-container { border: none; }
+            body { background: white; padding: 0; }
+            .page { box-shadow: none; }
             @page { size: landscape; }
         }
     </style>
@@ -144,61 +146,69 @@
 <body>
 
     <div class="controls">
-        <button onclick="window.print()">Print Document</button>
+        <button onclick="window.print()" style="padding:10px 20px; background:#1a73ba; color:white; border:none; border-radius:5px; cursor:pointer;">Print Card</button>
     </div>
 
     <div class="page">
         <div id="qrcode"></div>
 
-        <div class="header">
-            <p class="hospital-name">PERPETUAL HELP</p>
-            <p class="location">MEDICAL CENTER - LAS PIÑAS</p>
+        <div class="header-blue-bar">
+            <div class="project-label">PROJECT: <input type="text" style="background:transparent; border:none; color:white; font-size:18pt; width:400px; outline:none;" placeholder="TITLE HERE"></div>
+            <div class="date-section">
+                <span>FA ● EMAILED ●</span>
+                <input type="text" value="04 | 08 | 2026" style="background:white; border:none; padding:2px 5px; width:100px; text-align:center;">
+            </div>
         </div>
 
-        <table class="info-table">
-            <tr>
-                <td class="label">PROJECT:</td>
-                <td style="width: 50%"><input type="text" class="editable-content" placeholder="Enter Project Name"></td>
-                <td class="label">EMAILED:</td>
-                <td><input type="text" class="editable-content" value="04 08 2026"></td>
-            </tr>
-            <tr>
-                <td class="label">CREATED BY:</td>
-                <td colspan="3"><input type="text" class="editable-content" value="Department/Center"></td>
-            </tr>
-        </table>
+        <div class="sub-header">
+            <div class="created-by-box">CREATED BY :</div>
+            <div class="dept-box"><input type="text" class="editable-content" style="border:none; width:100%; outline:none;" value="Department/Center"></div>
+        </div>
+
+        <div class="hospital-branding">
+            <img src="https://i.imgur.com/VbZKWAf.png" alt="PHMC Logo">
+        </div>
 
         <div class="upload-container" onclick="document.getElementById('file-input').click()">
-            <div class="upload-placeholder" id="placeholder-text">
-                <p>Click to upload project image or drag and drop</p>
-            </div>
-            <img id="display-image" src="" style="display:none;">
-            <input type="file" id="file-input" accept="image/*" onchange="previewImage(event)">
+            <span class="upload-placeholder">Click to upload project photo</span>
+            <img id="preview" src="">
+            <input type="file" id="file-input" hidden onchange="loadFile(event)">
         </div>
 
-        <img src="https://i.imgur.com/VbZKWAf.png" class="footer-logo" alt="Logo">
+        <div class="signatory-grid">
+            <div class="sig-box">
+                <input type="text" class="input-name" placeholder="FULL NAME">
+                <input type="text" class="input-title" placeholder="Position / Title">
+            </div>
+            <div class="sig-box">
+                <input type="text" class="input-name" placeholder="FULL NAME">
+                <input type="text" class="input-title" placeholder="Position / Title">
+            </div>
+            <div class="sig-box">
+                <input type="text" class="input-name" placeholder="FULL NAME">
+                <input type="text" class="input-title" placeholder="Position / Title">
+            </div>
+            <div class="sig-box">
+                <input type="text" class="input-name" placeholder="FULL NAME">
+                <input type="text" class="input-title" placeholder="Position / Title">
+            </div>
+        </div>
+
+        <img src="https://i.imgur.com/VbZKWAf.png" class="footer-logo">
     </div>
 
     <script>
-        // Initialize QR Code 
-        const qrcode = new QRCode(document.getElementById("qrcode"), {
-            text: "PHMC-DOC-2026",
-            width: 100,
-            height: 100
+        new QRCode(document.getElementById("qrcode"), {
+            text: "PROJECT-VERIFY-2026",
+            width: 80,
+            height: 80
         });
 
-        // Image Preview Function
-        function previewImage(event) {
-            const reader = new FileReader();
-            reader.onload = function() {
-                const output = document.getElementById('display-image');
-                const placeholder = document.getElementById('placeholder-text');
-                output.src = reader.result;
-                output.style.display = 'block';
-                placeholder.style.display = 'none';
-            };
-            reader.readAsDataURL(event.target.files[0]);
-        }
+        var loadFile = function(event) {
+            var output = document.getElementById('preview');
+            output.src = URL.createObjectURL(event.target.files[0]);
+            document.querySelector('.upload-placeholder').style.display = 'none';
+        };
     </script>
 </body>
 </html>
