@@ -2,70 +2,45 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PHMC Project Verification</title>
+    <title>PHMC Verification</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background: #f4f4f4; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
-        .hospital-logo { width: 200px; margin-bottom: 20px; }
-        .project-image { width: 100%; border-radius: 8px; margin: 20px 0; border: 1px solid #ddd; }
-        .label { color: #1a73ba; font-weight: bold; font-size: 0.9rem; text-transform: uppercase; margin-top: 15px; }
-        .value { font-size: 1.2rem; margin-bottom: 10px; color: #333; }
-        .status { color: #007b43; font-weight: bold; margin-top: 20px; display: block; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+        .logo { width: 180px; margin-bottom: 20px; }
+        .proj-img { width: 100%; border-radius: 8px; margin: 15px 0; border: 1px solid #ddd; max-height: 300px; object-fit: contain; }
+        .label { color: #1a73ba; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; margin-top: 10px; }
+        .val { font-size: 1.1rem; margin-bottom: 8px; color: #333; font-weight: bold; }
+        .verified { color: #007b43; font-weight: bold; border: 2px solid #007b43; display: inline-block; padding: 5px 15px; margin-top: 15px; }
     </style>
 </head>
 <body>
-    <div class="card" id="content">
-        <img src="https://i.imgur.com/VbZKWAf.png" class="hospital-logo">
-        <h2>Project Verification</h2>
-        <div id="loading">Searching database...</div>
-        <div id="details" style="display:none;">
-            <div class="label">Project Name</div>
-            <div id="v-name" class="value"></div>
-            
+    <div class="card">
+        <img src="https://i.imgur.com/VbZKWAf.png" class="logo">
+        <div id="loading">Verifying Project ID...</div>
+        <div id="res" style="display:none;">
+            <div class="label">Project Title</div>
+            <div id="p-name" class="val"></div>
             <div class="label">Created By</div>
-            <div id="v-author" class="value"></div>
-
-            <img id="v-image" class="project-image" src="">
-
-            <span class="status">✓ VERIFIED AUTHENTIC</span>
+            <div id="p-user" class="val"></div>
+            <img id="p-img" class="proj-img">
+            <div class="verified">✓ AUTHENTIC DOCUMENT</div>
         </div>
     </div>
-
     <script>
         const _supabase = supabase.createClient('https://tywhjkofayqhmwbpzvlg.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d2hqa29mYXlxaG13YnB6dmxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzA2ODYsImV4cCI6MjA5MTIwNjY4Nn0.F-mFKAhn5kRtAU1XOM5jMiT4-zL3P6YJ7Rtj9VGatH4');
-
-        async function verifyProject() {
-            // Get ID from URL (e.g., verify.html?id=MKTG-A1B2C)
-            const params = new URLSearchParams(window.location.search);
-            const projectID = params.get('id');
-
-            if (!projectID) {
-                document.getElementById('loading').innerText = "No Project ID provided.";
-                return;
-            }
-
-            // Fetch from Supabase Table
-            const { data, error } = await _supabase
-                .from('projects')
-                .select('project_name, created_by_name, image_url')
-                .eq('project_no', projectID)
-                .single();
-
-            if (error || !data) {
-                document.getElementById('loading').innerText = "Project not found in PHMC records.";
-                return;
-            }
-
-            // Update UI
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('details').style.display = 'block';
-            document.getElementById('v-name').innerText = data.project_name;
-            document.getElementById('v-author').innerText = data.created_by_name;
-            document.getElementById('v-image').src = data.image_url;
+        async function load() {
+            const id = new URLSearchParams(window.location.search).get('id');
+            const { data, error } = await _supabase.from('projects').select('*').eq('project_no', id).single();
+            if (data) {
+                document.getElementById('loading').style.display='none';
+                document.getElementById('res').style.display='block';
+                document.getElementById('p-name').innerText = data.project_name;
+                document.getElementById('p-user').innerText = data.created_by_name;
+                document.getElementById('p-img').src = data.image_url;
+            } else { document.getElementById('loading').innerText = "Invalid Project ID."; }
         }
-
-        verifyProject();
+        load();
     </script>
 </body>
 </html>
