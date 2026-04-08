@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Signatory Project</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 40px; }
+        
+        .document-card {
+            background: white;
+            width: 800px;
+            padding: 30px;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        /* QR Code Positioning */
+        #qrcode {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 5px;
+            border: 1px solid #eee;
+        }
+
+        .header-text {
+            border-bottom: 2px solid #007b43; /* Medical Center Green */
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+
+        .hospital-name {
+            font-weight: bold;
+            font-size: 1.4rem;
+            color: #d32f2f; /* Medical Red */
+            margin: 0;
+        }
+
+        .location {
+            font-size: 1rem;
+            color: #333;
+            margin: 0;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .info-table td {
+            padding: 12px;
+            border: 1px solid #ddd;
+        }
+
+        .label {
+            background-color: #f9f9f9;
+            font-weight: bold;
+            width: 25%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="document-card">
+    <div id="qrcode"></div>
+
+    <div class="header-text">
+        <p class="hospital-name">PERPETUAL HELP</p>
+        <p class="location">MEDICAL CENTER - LAS PIÑAS</p>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <td class="label">PROJECT:</td>
+            <td id="projectName">New Digital Signatory System</td>
+        </tr>
+        <tr>
+            <td class="label">CREATED BY:</td>
+            <td id="dept">Department/Center</td>
+        </tr>
+        <tr>
+            <td class="label">EMAILED:</td>
+            <td id="dateDisplay">04 08 2026</td>
+        </tr>
+    </table>
+</div>
+
+<script>
+    // Configuration
+    const projectUrl = "https://yourwebsite.com/verify/project-01"; // What the QR code scans to
+
+    // Initialize QR Code
+    new QRCode(document.getElementById("qrcode"), {
+        text: projectUrl,
+        width: 100,
+        height: 100,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+
+    // Optional: Set current date automatically
+    document.getElementById('dateDisplay').innerText = new Date().toLocaleDateString();
+</script>
+
+</body>
+</html>
