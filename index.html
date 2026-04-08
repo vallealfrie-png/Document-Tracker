@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PHMC Project Management - Real Time</title>
+    <title>PHMC Real-Time Project System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
-        body { font-family: 'Helvetica', Arial, sans-serif; background: #525659; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #525659; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
 
         .page {
             background: white;
@@ -21,26 +21,28 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
+        /* Branding Section */
         .hospital-branding-header { height: 100px; width: 300px; display: flex; align-items: center; padding: 20px; }
         .hospital-branding-header img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        /* QR Code Area */
+        /* QR Code Container - Real Time */
         .qr-container {
             position: absolute;
             top: 20px;
             right: 20px;
             text-align: center;
-            width: 120px;
         }
         #qrcode { 
             background: white; 
             padding: 5px; 
             border: 1px solid #eee; 
-            display: inline-block;
-            min-height: 100px;
-            min-width: 100px;
+            width: 110px; 
+            height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        #project-id-text { font-size: 10pt; font-weight: bold; color: #1a73ba; margin-top: 5px; font-family: monospace; }
+        #project-id-text { font-size: 11pt; font-weight: bold; color: #1a73ba; margin-top: 5px; font-family: monospace; }
 
         /* Main Image Area - STRICT AUTOFIT */
         .main-content-area {
@@ -53,14 +55,7 @@
             background-color: #fafafa;
             overflow: hidden; 
         }
-        
-        #img-preview { 
-            max-width: 100%; 
-            max-height: 100%; 
-            object-fit: contain; /* This prevents leaking */
-            display: none; 
-        }
-
+        #img-preview { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
         .upload-hint { color: #999; cursor: pointer; text-align: center; font-size: 14pt; }
 
         /* Bottom Section */
@@ -74,7 +69,7 @@
             padding: 12px 20px;
             align-items: center;
         }
-        .info-bar input { background: transparent; border: none; color: white; border-bottom: 1px solid rgba(255,255,255,0.4); outline: none; width: 70%; font-size: 11pt; }
+        .info-bar input { background: transparent; border: none; color: white; border-bottom: 1px solid rgba(255,255,255,0.4); outline: none; width: 75%; font-size: 11pt; }
 
         .signatory-grid { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
         .sig-box {
@@ -90,15 +85,18 @@
         .input-name { border: none; border-bottom: 1px solid #000; font-weight: bold; text-align: center; width: 90%; outline: none; font-size: 11pt; }
         .input-title { border: none; text-align: center; width: 90%; outline: none; font-size: 9pt; color: #555; }
 
+        /* UI Controls */
         .controls { margin-bottom: 10px; display: flex; gap: 10px; }
-        button { padding: 10px 25px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
+        button { padding: 12px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
         .btn-save { background: #1a73ba; }
+        .btn-save:hover { background: #155a8a; }
         .btn-print { background: #007b43; }
 
         @media print {
             .controls, .upload-hint { display: none; }
             body { background: white; padding: 0; }
             .page { box-shadow: none; border: none; width: 11in; height: 8.5in; }
+            .main-content-area { border: none; }
             @page { size: landscape; margin: 0; }
         }
     </style>
@@ -106,8 +104,8 @@
 <body>
 
     <div class="controls">
-        <button class="btn-save" onclick="saveToSupabase()">1. SAVE PROJECT</button>
-        <button class="btn-print" onclick="window.print()">2. PRINT</button>
+        <button class="btn-save" onclick="saveToSupabase()">1. SAVE TO SUPABASE</button>
+        <button class="btn-print" onclick="window.print()">2. PRINT DOCUMENT</button>
     </div>
 
     <div class="page">
@@ -117,7 +115,7 @@
 
         <div class="qr-container">
             <div id="qrcode"></div>
-            <div id="project-id-text">GENERATING...</div>
+            <div id="project-id-text">INITIALIZING...</div>
         </div>
 
         <div class="main-content-area" onclick="document.getElementById('file-input').click()">
@@ -130,61 +128,57 @@
 
         <div class="bottom-container">
             <div class="info-bar">
-                <div><strong>PROJECT:</strong> <input type="text" id="proj_name" placeholder="Enter Name"></div>
-                <div><strong>DEPARTMENT:</strong> <input type="text" id="dept_name" placeholder="Enter Dept"></div>
-                <div style="font-size: 9pt; text-align: right;"><strong>DATE:</strong> 04 | 08 | 2026</div>
+                <div><strong>PROJECT:</strong> <input type="text" id="proj_name" placeholder="Type Project Name..."></div>
+                <div><strong>DEPARTMENT:</strong> <input type="text" id="dept_name" placeholder="Type Department..."></div>
+                <div style="font-size: 9pt; text-align: right;"><strong>EMAILED:</strong> 04 | 08 | 2026</div>
             </div>
 
             <div class="signatory-grid">
                 <div class="sig-box">
                     <span class="sig-label">Created By:</span>
-                    <div class="sig-inputs"><input type="text" id="n1" class="input-name"><input type="text" id="p1" class="input-title"></div>
+                    <div class="sig-inputs"><input type="text" id="n1" class="input-name" placeholder="Name"><input type="text" id="p1" class="input-title" placeholder="Position"></div>
                 </div>
                 <div class="sig-box">
                     <span class="sig-label">Supervisor/Manager:</span>
-                    <div class="sig-inputs"><input type="text" id="n2" class="input-name"><input type="text" id="p2" class="input-title"></div>
+                    <div class="sig-inputs"><input type="text" id="n2" class="input-name" placeholder="Name"><input type="text" id="p2" class="input-title" placeholder="Position"></div>
                 </div>
                 <div class="sig-box">
                     <span class="sig-label">Department Head:</span>
-                    <div class="sig-inputs"><input type="text" id="n3" class="input-name"><input type="text" id="p3" class="input-title"></div>
+                    <div class="sig-inputs"><input type="text" id="n3" class="input-name" placeholder="Name"><input type="text" id="p3" class="input-title" placeholder="Position"></div>
                 </div>
                 <div class="sig-box">
                     <span class="sig-label">Approved By:</span>
-                    <div class="sig-inputs"><input type="text" id="n4" class="input-name"><input type="text" id="p4" class="input-title"></div>
+                    <div class="sig-inputs"><input type="text" id="n4" class="input-name" placeholder="Name"><input type="text" id="p4" class="input-title" placeholder="Position"></div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. CONFIGURATION ---
+        // --- 1. SUPABASE CONFIG ---
         const _supabase = supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
-        let globalProjectID = "";
+        let currentProjectNo = "";
 
-        // --- 2. REAL-TIME INITIALIZATION ---
-        // This runs the moment the page is ready
-        window.addEventListener('DOMContentLoaded', (event) => {
-            generateRealTimeID();
-        });
-
-        function generateRealTimeID() {
-            // Generate 5-digit Hex
-            const hexID = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
-            globalProjectID = `MKTG-${hexID}`;
+        // --- 2. INSTANT LOADING LOGIC ---
+        // This ensures the QR and ID load the moment you open the browser
+        window.onload = function() {
+            // Generate Random 5-digit Hex
+            const hex = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
+            currentProjectNo = `MKTG-${hex}`;
             
-            // Update Text
-            document.getElementById('project-id-text').innerText = `ID: ${globalProjectID}`;
+            // Update the Display ID
+            document.getElementById('project-id-text').innerText = `ID: ${currentProjectNo}`;
 
-            // Create QR Code immediately
-            const qrDiv = document.getElementById("qrcode");
-            qrDiv.innerHTML = ""; // Clear any old QR
-            new QRCode(qrDiv, {
-                text: `https://your-verify-link.com/check?id=${globalProjectID}`,
+            // Generate the QR Code
+            const qrContainer = document.getElementById("qrcode");
+            qrContainer.innerHTML = ""; // Clear
+            new QRCode(qrContainer, {
+                text: `https://your-domain.com/verify?id=${currentProjectNo}`,
                 width: 100,
                 height: 100,
                 correctLevel: QRCode.CorrectLevel.H
             });
-        }
+        };
 
         // --- 3. IMAGE PREVIEW ---
         function previewFile(event) {
@@ -203,21 +197,23 @@
             }
         }
 
-        // --- 4. SUPABASE SAVE ---
+        // --- 4. SUPABASE SAVE FUNCTION ---
         async function saveToSupabase() {
             const file = document.getElementById('file-input').files[0];
-            if (!file) { alert("Please upload an image first."); return; }
+            if (!file) { alert("Please upload a project photo first!"); return; }
 
-            const { data: uploadData, error: uploadError } = await _supabase.storage
+            // A. Upload photo to Supabase Storage
+            const { data: storageData, error: storageError } = await _supabase.storage
                 .from('project-images')
-                .upload(`${globalProjectID}.png`, file);
+                .upload(`${currentProjectNo}.png`, file);
 
-            if (uploadError) { alert("Upload error: " + uploadError.message); return; }
+            if (storageError) { alert("Upload error: " + storageError.message); return; }
 
-            const publicUrl = _supabase.storage.from('project-images').getPublicUrl(`${globalProjectID}.png`).data.publicUrl;
+            const publicUrl = _supabase.storage.from('project-images').getPublicUrl(`${currentProjectNo}.png`).data.publicUrl;
 
+            // B. Insert project data to Table
             const { error: dbError } = await _supabase.from('projects').insert([{
-                project_no: globalProjectID,
+                project_no: currentProjectNo,
                 project_name: document.getElementById('proj_name').value,
                 department: document.getElementById('dept_name').value,
                 emailed_date: "04/08/2026",
@@ -232,8 +228,8 @@
                 approved_by_pos: document.getElementById('p4').value
             }]);
 
-            if (dbError) alert("Database Error: " + dbError.message);
-            else alert("Project " + globalProjectID + " Saved Successfully!");
+            if (dbError) alert("Database save error: " + dbError.message);
+            else alert("Successfully saved Project: " + currentProjectNo);
         }
     </script>
 </body>
