@@ -8,7 +8,17 @@
     
     <style>
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #525659; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        /* Ensure the body doesn't add extra margins during print */
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #525659; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
 
         .page {
             background: white;
@@ -24,7 +34,6 @@
         .hospital-branding-header { height: 100px; width: 300px; display: flex; align-items: center; padding: 20px; }
         .hospital-branding-header img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        /* QR Code Container */
         .qr-container {
             position: absolute;
             top: 20px;
@@ -42,7 +51,7 @@
         }
         #project-id-text { font-size: 11pt; font-weight: bold; color: #1a73ba; margin-top: 5px; font-family: monospace; }
 
-        /* Main Image Area - STRICT AUTOFIT */
+        /* Main Image Area */
         .main-content-area {
             flex: 1;
             margin: 0 20px;
@@ -64,28 +73,34 @@
 
         .upload-hint { color: #999; cursor: pointer; text-align: center; font-size: 14pt; }
 
-        /* Bottom Section */
-        .bottom-container { width: 100%; margin-top: auto; }
+        /* Bottom Section - Adjusted to prevent cut-off */
+        .bottom-container { 
+            width: 100%; 
+            margin-top: auto; 
+            padding-bottom: 5px; /* Added small buffer */
+        }
 
         .info-bar {
             background-color: #1a73ba;
             color: white;
             display: grid;
             grid-template-columns: 1.5fr 1fr 200px;
-            padding: 12px 20px;
+            padding: 10px 20px; /* Reduced padding slightly */
             align-items: center;
         }
         .info-bar input { background: transparent; border: none; color: white; border-bottom: 1px solid rgba(255,255,255,0.4); outline: none; width: 75%; font-size: 11pt; }
 
         .signatory-grid { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
+        
         .sig-box {
             border: 0.5px solid #1a73ba;
-            height: 130px;
-            padding: 10px;
+            height: 115px; /* Reduced from 130px to prevent bottom cut-off */
+            padding: 8px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
+        
         .sig-label { font-size: 8pt; font-weight: bold; color: #1a73ba; text-transform: uppercase; }
         .sig-inputs { display: flex; flex-direction: column; align-items: center; }
         .input-name { border: none; border-bottom: 1px solid #000; font-weight: bold; text-align: center; width: 90%; outline: none; font-size: 11pt; }
@@ -95,16 +110,23 @@
         .controls { margin-bottom: 10px; display: flex; gap: 10px; }
         button { padding: 12px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
         .btn-save { background: #1a73ba; }
-        .btn-save:hover { background: #155a8a; }
         .btn-print { background: #007b43; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
 
         @media print {
             .controls, .upload-hint { display: none; }
-            body { background: white; padding: 0; }
-            .page { box-shadow: none; border: none; width: 11in; height: 8.5in; }
+            body { background: white; padding: 0; margin: 0; }
+            .page { 
+                box-shadow: none; 
+                border: none; 
+                width: 11in; 
+                height: 8.5in; 
+                margin: 0;
+            }
             .main-content-area { border: none; }
-            @page { size: landscape; margin: 0; }
+            @page { 
+                size: landscape; 
+                margin: 0; /* Forces the printer to respect our CSS sizing */
+            }
         }
     </style>
 </head>
@@ -175,14 +197,12 @@
     </div>
 
     <script>
-        // --- 1. SUPABASE INTEGRATION ---
         const SUPABASE_URL = 'https://tywhjkofayqhmwbpzvlg.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d2hqa29mYXlxaG13YnB6dmxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzA2ODYsImV4cCI6MjA5MTIwNjY4Nn0.F-mFKAhn5kRtAU1XOM5jMiT4-zL3P6YJ7Rtj9VGatH4';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let currentProjectNo = "";
 
-        // --- 2. INITIALIZE QR & ID ---
         function init() {
             const hex = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
             currentProjectNo = `MKTG-${hex}`;
@@ -191,7 +211,6 @@
             const qrElement = document.getElementById("qrcode");
             qrElement.innerHTML = "";
             new QRCode(qrElement, {
-                // REDIRECTS TO YOUR GITHUB PAGES URL
                 text: `https://vallealfrie-png.github.io/Document-Tracker/qrpreview.html?id=${currentProjectNo}`,
                 width: 100,
                 height: 100,
@@ -201,7 +220,6 @@
 
         window.onload = init;
 
-        // --- 3. IMAGE HANDLER ---
         function previewFile(event) {
             const output = document.getElementById('img-preview');
             const hint = document.getElementById('hint');
@@ -217,27 +235,18 @@
             }
         }
 
-        // --- 4. SAVE HANDLER ---
         async function saveToSupabase() {
             const file = document.getElementById('file-input').files[0];
-            if (!file) { alert("Please upload a project image first!"); return; }
+            if (!file) { alert("Please upload image!"); return; }
 
             const saveBtn = document.getElementById('save-btn');
             saveBtn.innerText = "UPLOADING...";
             saveBtn.disabled = true;
 
             try {
-                // 1. Upload to Storage
-                const { data: storageData, error: sErr } = await _supabase.storage
-                    .from('project-images')
-                    .upload(`${currentProjectNo}.png`, file);
-
-                if (sErr) throw sErr;
-
-                // 2. Get Public Link
+                await _supabase.storage.from('project-images').upload(`${currentProjectNo}.png`, file);
                 const { data: { publicUrl } } = _supabase.storage.from('project-images').getPublicUrl(`${currentProjectNo}.png`);
 
-                // 3. Insert to Table
                 const { error: dbErr } = await _supabase.from('projects').insert([{
                     project_no: currentProjectNo,
                     project_name: document.getElementById('proj_name').value,
@@ -255,8 +264,7 @@
                 }]);
 
                 if (dbErr) throw dbErr;
-
-                alert("Successfully saved Project: " + currentProjectNo);
+                alert("Saved to Database!");
             } catch (err) {
                 alert("Error: " + err.message);
             } finally {
