@@ -2,110 +2,148 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Signatory Project</title>
+    <title>Editable Signatory Card</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 40px; }
-        
-        .document-card {
+        :root {
+            --primary-red: #d32f2f;
+            --primary-green: #007b43;
+        }
+
+        body { font-family: Arial, sans-serif; background: #525659; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+
+        /* Document Container */
+        .page {
             background: white;
-            width: 800px;
-            padding: 30px;
-            border: 1px solid #ccc;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 8.5in; /* Standard Letter Size */
+            min-height: 5in;
+            padding: 0.5in;
             position: relative;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            box-sizing: border-box;
         }
 
-        /* QR Code Positioning */
-        #qrcode {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 5px;
-            border: 1px solid #eee;
-        }
-
-        .header-text {
-            border-bottom: 2px solid #007b43; /* Medical Center Green */
+        /* Header Styling */
+        .header {
+            border-bottom: 3px solid var(--primary-green);
             margin-bottom: 20px;
             padding-bottom: 10px;
         }
 
         .hospital-name {
+            color: var(--primary-red);
+            font-size: 24pt;
             font-weight: bold;
-            font-size: 1.4rem;
-            color: #d32f2f; /* Medical Red */
             margin: 0;
+            letter-spacing: 1px;
         }
 
         .location {
-            font-size: 1rem;
-            color: #333;
+            font-size: 14pt;
+            font-weight: bold;
             margin: 0;
         }
 
+        /* QR Code Top Right */
+        #qrcode {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+        }
+
+        /* Editable Table */
         .info-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 10px;
         }
 
         .info-table td {
-            padding: 12px;
-            border: 1px solid #ddd;
+            border: 1px solid #000;
+            padding: 10px;
+            vertical-align: top;
         }
 
         .label {
-            background-color: #f9f9f9;
             font-weight: bold;
-            width: 25%;
+            font-size: 10pt;
+            width: 15%;
+        }
+
+        /* Editable Input Fields */
+        .editable-content {
+            width: 95%;
+            border: none;
+            font-size: 12pt;
+            outline: none;
+            resize: none;
+            display: block;
+        }
+
+        .editable-content:focus { background: #fffde7; }
+
+        /* UI Buttons */
+        .controls { margin-bottom: 20px; }
+        button { padding: 10px 20px; cursor: pointer; background: var(--primary-green); color: white; border: none; border-radius: 4px; font-weight: bold; }
+
+        /* PRINT STYLES */
+        @media print {
+            body { background: white; padding: 0; }
+            .page { box-shadow: none; border: none; width: 100%; }
+            .controls { display: none; }
+            .editable-content:focus { background: transparent; }
         }
     </style>
 </head>
 <body>
 
-<div class="document-card">
-    <div id="qrcode"></div>
-
-    <div class="header-text">
-        <p class="hospital-name">PERPETUAL HELP</p>
-        <p class="location">MEDICAL CENTER - LAS PIÑAS</p>
+    <div class="controls">
+        <button onclick="window.print()">Print to PDF / Paper</button>
     </div>
 
-    <table class="info-table">
-        <tr>
-            <td class="label">PROJECT:</td>
-            <td id="projectName">New Digital Signatory System</td>
-        </tr>
-        <tr>
-            <td class="label">CREATED BY:</td>
-            <td id="dept">Department/Center</td>
-        </tr>
-        <tr>
-            <td class="label">EMAILED:</td>
-            <td id="dateDisplay">04 08 2026</td>
-        </tr>
-    </table>
-</div>
+    <div class="page">
+        <div id="qrcode"></div>
 
-<script>
-    // Configuration
-    const projectUrl = "https://yourwebsite.com/verify/project-01"; // What the QR code scans to
+        <div class="header">
+            <p class="hospital-name">PERPETUAL HELP</p>
+            <p class="location">MEDICAL CENTER - LAS PIÑAS</p>
+        </div>
 
-    // Initialize QR Code
-    new QRCode(document.getElementById("qrcode"), {
-        text: projectUrl,
-        width: 100,
-        height: 100,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
-    });
+        <table class="info-table">
+            <tr>
+                <td class="label">PROJECT:</td>
+                <td>
+                    <textarea class="editable-content" rows="2">Enter Project Name...</textarea>
+                </td>
+                <td class="label" style="width:10%">EMAILED:</td>
+                <td style="width:20%">
+                    <input type="text" class="editable-content" value="04 08 2026">
+                </td>
+            </tr>
+            <tr>
+                <td class="label">CREATED BY:</td>
+                <td colspan="3">
+                    <textarea class="editable-content">Department/Center</textarea>
+                </td>
+            </tr>
+        </table>
+    </div>
 
-    // Optional: Set current date automatically
-    document.getElementById('dateDisplay').innerText = new Date().toLocaleDateString();
-</script>
+    <script>
+        // Generate QR code based on the Project Name automatically
+        const qrContainer = document.getElementById("qrcode");
+        const qr = new QRCode(qrContainer, {
+            text: "VERIFICATION-ID-12345",
+            width: 90,
+            height: 90
+        });
 
+        // Optional: Make QR update when typing in Project field
+        const projectInput = document.querySelector('.editable-content');
+        projectInput.addEventListener('input', (e) => {
+            qr.clear();
+            qr.makeCode(e.target.value || "Empty");
+        });
+    </script>
 </body>
 </html>
