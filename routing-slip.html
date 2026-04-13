@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PHMC Routing Slip Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        /* UI Panel */
+        .generator-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 400px; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
+        label { font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; color: #555; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #1a73ba; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; }
+        button:disabled { background: #ccc; }
+
+        /* The Slip Design */
+        #printable-slip { 
+            background: white; 
+            width: 4in; 
+            padding: 0.25in; 
+            border: 2px solid #000; 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            text-align: center;
+        }
+        .slip-logo { width: 180px; margin-bottom: 10px; }
+        .slip-title { font-size: 14pt; font-weight: bold; border-bottom: 2px solid #1a73ba; margin-bottom: 15px; width: 100%; padding-bottom: 5px; }
+        .data-label { font-size: 8pt; color: #666; text-transform: uppercase; margin-top: 10px; }
+        .data-value { font-size: 11pt; font-weight: bold; margin-bottom: 5px; }
+        #qrcode { margin: 15px 0; padding: 10px; border: 1px solid #eee; }
+        .hex-display { font-family: monospace; font-size: 14pt; letter-spacing: 3px; background: #f4f4f4; padding: 5px 15px; border-radius: 4px; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .generator-panel { display: none; }
+            #printable-slip { display: flex !important; border: none; width: 100%; }
+            @page { size: portrait; margin: 0.5in; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="generator-panel">
+        <h3 style="margin-top:0; color: #1a73ba;">Generate Routing Slip</h3>
+        <div class="form-group">
+            <label>Category</label>
+            <input type="text" id="category" placeholder="e.g. Legal, Finance">
+        </div>
+        <div class="form-group">
+            <label>Document / Project Name</label>
+            <input type="text" id="project_name" placeholder="Enter name">
+        </div>
+        <button id="gen-btn" onclick="startGeneration()">GENERATE & SAVE</button>
+        <button id="print-btn" onclick="window.print()" style="margin-top:10px; background: #28a745; display:none;">PRINT SLIP</button>
+    </div>
+
+    <div id="printable-slip">
+        <img src="https://i.imgur.com/VbZKWAf.png" class="slip-logo">
+        <div class="slip-title">DOCUMENT ROUTING SLIP</div>
+        
+        <div class="data-label">Category</div>
+        <div id="disp-category" class="data-value">---</div>
+        
+        <div class="data-label">Document Name</div>
+        <div id="disp-project" class="data-value">---</div>
+
+        <div id="qrcode"></div>
+        
+        <div class="data-label">Tracking ID</div>
+        <div id="disp-hex" class="hex-display">-----</div>
+    </div>
+
+    <script>
+        const _supabase = supabase.createClient('https://tywhjkofayqhmwbpzvlg.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d2hqa29mYXlxaG13YnB6dmxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzA2ODYsImV4cCI6MjA5MTIwNjY4Nn0.F-mFKAhn5kRtAU1XOM5jMiT4-zL3P6YJ7Rtj9VGatH4');
+
+        async function generateUniqueHex() {
+            let isUnique = false;
+            let hex = "";
+            
+            while (!isUnique) {
+                // Generate 5-digit hex
+                hex = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
+                
+                // Check uniqueness in database
+                const { data } = await _supabase
+                    .from('routing_slips')
+                    .select('qr_code')
+                    .eq('qr_code', hex);
+                
+                if (data.length === 0) isUnique = true;
+            }
+            return hex;
+        }
+
+        async function startGeneration() {
+            const cat = document.getElementById('category').value;
+            const proj = document.getElementById('project_name').value;
+            const btn = document.getElementById('gen-btn');
+
+            if (!cat || !proj) { alert("Please fill in all fields"); return; }
+
+            btn.disabled = true;
+            btn.innerText = "CHECKING UNIQUENESS...";
+
+            const uniqueHex = await generateUniqueHex();
+            const fullLink = `https://vallealfrie-png.github.io/Document-Tracker/track.html?id=${uniqueHex}`;
+
+            // Save to Supabase
+            const { error } = await _supabase.from('routing_slips').insert([{
+                category: cat,
+                project_name: proj,
+                qr_code: uniqueHex,
+                qr_link: fullLink
+            }]);
+
+            if (error) {
+                alert("Database Error: " + error.message);
+                btn.disabled = false;
+                btn.innerText = "GENERATE & SAVE";
+            } else {
+                // Success - Show Slip
+                renderSlip(cat, proj, uniqueHex, fullLink);
+                document.getElementById('print-btn').style.display = 'block';
+                btn.innerText = "GENERATED!";
+            }
+        }
+
+        function renderSlip(cat, proj, hex, link) {
+            document.getElementById('disp-category').innerText = cat;
+            document.getElementById('disp-project').innerText = proj;
+            document.getElementById('disp-hex').innerText = hex;
+            
+            const qrBox = document.getElementById('qrcode');
+            qrBox.innerHTML = ""; // Clear old QR
+            new QRCode(qrBox, {
+                text: link,
+                width: 150,
+                height: 150,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('printable-slip').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
