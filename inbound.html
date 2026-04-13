@@ -6,28 +6,29 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; }
+        .container { max-width: 1000px; margin: auto; }
         
-        /* Header Area */
         .header { display: flex; align-items: center; justify-content: space-between; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .header img { width: 150px; }
         .header h2 { color: #1a73ba; margin: 0; }
 
-        /* Form Styling */
-        .log-form { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .log-form { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
         .form-group { display: flex; flex-direction: column; }
-        label { font-size: 0.85rem; font-weight: bold; color: #555; margin-bottom: 5px; text-transform: uppercase; }
-        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-size: 1rem; }
-        .full-width { grid-column: span 2; }
+        label { font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 5px; text-transform: uppercase; }
+        
+        /* Input & Datalist Styling */
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-size: 1rem; }
+        input:focus { border-color: #1a73ba; }
+        
+        .full-width { grid-column: span 3; }
         .readonly-field { background: #eee; color: #777; cursor: not-allowed; }
 
-        button { background: #1a73ba; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        button { background: #1a73ba; color: white; border: none; padding: 15px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
         button:hover { background: #155a8a; }
 
-        /* Registry Table */
         .registry { margin-top: 30px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #1a73ba; color: white; padding: 12px; text-align: left; font-size: 0.9rem; }
+        th { background: #1a73ba; color: white; padding: 12px; text-align: left; font-size: 0.85rem; }
         td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.9rem; color: #333; }
         tr:hover { background: #f9f9f9; }
         .status-tag { background: #eef6ff; color: #1a73ba; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
@@ -43,31 +44,32 @@
 
     <div class="log-form">
         <div class="form-group">
-            <label>Document Category</label>
-            <select id="category">
-                <option value="General Memo">General Memo</option>
-                <option value="Invoice/Billing">Invoice/Billing</option>
-                <option value="Project Proposal">Project Proposal</option>
-                <option value="Legal Document">Legal Document</option>
-                <option value="Marketing Collateral">Marketing Collateral</option>
-            </select>
+            <label>Category (Type or Select)</label>
+            <input list="category-list" id="category" placeholder="e.g. Memo, Invoice...">
+            <datalist id="category-list">
+                </datalist>
         </div>
+
         <div class="form-group">
             <label>Project Name</label>
-            <input type="text" id="project_name" placeholder="Enter related project">
+            <input type="text" id="project_name" placeholder="Name of project">
         </div>
+
         <div class="form-group">
-            <label>Assign To (Receiver)</label>
-            <input type="text" id="assigned_to" placeholder="Name of person responsible">
+            <label>Assign To</label>
+            <input type="text" id="assigned_to" placeholder="Person responsible">
         </div>
+
         <div class="form-group">
-            <label>Current Timestamp</label>
-            <input type="text" id="timestamp" class="readonly-field" readonly>
-        </div>
-        <div class="form-group full-width">
             <label>Logged By</label>
             <input type="text" id="received_by" placeholder="Your Name">
         </div>
+
+        <div class="form-group" style="grid-column: span 2;">
+            <label>Current Timestamp (Auto)</label>
+            <input type="text" id="timestamp" class="readonly-field" readonly>
+        </div>
+
         <button class="full-width" onclick="submitInboundLog()">LOG & DISTRIBUTE DOCUMENT</button>
     </div>
 
@@ -79,11 +81,10 @@
                     <th>Category</th>
                     <th>Project</th>
                     <th>Assigned To</th>
-                    <th>Status</th>
+                    <th>Logged By</th>
                 </tr>
             </thead>
-            <tbody id="log-table-body">
-                </tbody>
+            <tbody id="log-table-body"></tbody>
         </table>
     </div>
 </div>
@@ -91,15 +92,33 @@
 <script>
     const _supabase = supabase.createClient('https://tywhjkofayqhmwbpzvlg.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d2hqa29mYXlxaG13YnB6dmxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzA2ODYsImV4cCI6MjA5MTIwNjY4Nn0.F-mFKAhn5kRtAU1XOM5jMiT4-zL3P6YJ7Rtj9VGatH4');
 
-    // Update the uneditable timestamp every second
     function updateClock() {
-        const now = new Date();
-        document.getElementById('timestamp').value = now.toLocaleString();
+        document.getElementById('timestamp').value = new Date().toLocaleString();
     }
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Fetch and display existing logs
+    // 1. DYNAMIC CATEGORY LOADER
+    async function loadCategories() {
+        // Fetch all categories currently in the table
+        const { data, error } = await _supabase.from('inbound_logs').select('category');
+        
+        if (data) {
+            // Filter for unique values only
+            const uniqueCats = [...new Set(data.map(item => item.category))];
+            const list = document.getElementById('category-list');
+            list.innerHTML = ''; // Clear current list
+            
+            uniqueCats.forEach(cat => {
+                if(cat) { // Ensure no blank ones
+                    let option = document.createElement('option');
+                    option.value = cat;
+                    list.appendChild(option);
+                }
+            });
+        }
+    }
+
     async function fetchLogs() {
         const { data, error } = await _supabase
             .from('inbound_logs')
@@ -114,25 +133,26 @@
                 tableBody.innerHTML += `
                     <tr>
                         <td>${date}</td>
-                        <td><strong>${log.category}</strong></td>
+                        <td><span class="status-tag">${log.category}</span></td>
                         <td>${log.project_name}</td>
                         <td>${log.assigned_to}</td>
-                        <td><span class="status-tag">${log.status}</span></td>
+                        <td>${log.received_by}</td>
                     </tr>
                 `;
             });
         }
+        // Also refresh categories list whenever we fetch logs
+        loadCategories();
     }
 
-    // Submit new log to Supabase
     async function submitInboundLog() {
         const category = document.getElementById('category').value;
         const project_name = document.getElementById('project_name').value;
         const assigned_to = document.getElementById('assigned_to').value;
         const received_by = document.getElementById('received_by').value;
 
-        if (!project_name || !assigned_to) {
-            alert("Please fill in all fields.");
+        if (!category || !project_name || !assigned_to) {
+            alert("Category, Project, and Assignee are required!");
             return;
         }
 
@@ -144,16 +164,17 @@
         }]);
 
         if (error) {
-            alert("Error logging document: " + error.message);
+            alert("Error: " + error.message);
         } else {
-            alert("Document logged and assigned!");
-            fetchLogs(); // Refresh the table
+            // Success
+            document.getElementById('category').value = '';
             document.getElementById('project_name').value = '';
             document.getElementById('assigned_to').value = '';
+            fetchLogs(); 
         }
     }
 
-    // Initial load
+    // Initial Load
     fetchLogs();
 </script>
 
