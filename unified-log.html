@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PHMC Unified Document System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        
+        .main-layout { display: flex; gap: 20px; max-width: 1200px; margin: auto; }
+        
+        /* Left Side: Form */
+        .form-container { flex: 1; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .form-group { display: flex; flex-direction: column; margin-bottom: 12px; }
+        label { font-size: 0.75rem; font-weight: bold; color: #1a73ba; margin-bottom: 4px; text-transform: uppercase; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+        .hint { font-size: 0.7rem; color: #888; margin-top: 2px; }
+        
+        button { width: 100%; padding: 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-process { background: #1a73ba; color: white; }
+        .btn-print { background: #28a745; color: white; display: none; }
+
+        /* Right Side: Slip Preview */
+        .preview-container { width: 350px; }
+        #printable-slip { 
+            background: white; 
+            padding: 20px; 
+            border: 2px solid #1a73ba; 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            text-align: center;
+        }
+        .slip-logo { width: 150px; margin-bottom: 10px; }
+        .qr-box { padding: 10px; background: white; border: 1px solid #eee; margin: 10px 0; }
+        .hex-code { font-family: monospace; font-size: 16pt; font-weight: bold; letter-spacing: 4px; background: #f8f9fa; padding: 5px 15px; border: 1px dashed #1a73ba; }
+        .target-list { font-size: 9pt; color: #444; margin-top: 10px; font-style: italic; }
+
+        @media print {
+            .form-container, h2, .btn-print { display: none; }
+            body { background: white; padding: 0; }
+            .main-layout { display: block; }
+            #printable-slip { display: flex !important; border: none; width: 3.5in; margin: auto; }
+            @page { size: portrait; margin: 0.2in; }
+        }
+    </style>
+</head>
+<body>
+
+    <h2 style="text-align:center; color: #1a73ba;">Unified Document Routing & Log</h2>
+
+    <div class="main-layout">
+        <div class="form-container">
+            <div class="form-group">
+                <label>Category</label>
+                <input list="cat-list" id="category" placeholder="Select or Type">
+                <datalist id="cat-list"></datalist>
+            </div>
+            <div class="form-group">
+                <label>Project / Document Name</label>
+                <input type="text" id="project_name">
+            </div>
+            <div class="form-group">
+                <label>Target Departments</label>
+                <input type="text" id="departments" placeholder="Accounting, HR, Admin">
+                <span class="hint">Separate with commas (e.g. Dept1, Dept2)</span>
+            </div>
+            <div class="form-group">
+                <label>Routed By</label>
+                <input type="text" id="route_by" placeholder="Your Name">
+            </div>
+            <div class="form-group">
+                <label>Messenger / Take-out By</label>
+                <input type="text" id="takeout_by">
+            </div>
+            
+            <button class="btn-process" id="proc-btn" onclick="processAll()">PROCESS & GENERATE QR</button>
+            <button class="btn-print" id="print-btn" onclick="window.print()">PRINT ROUTING SLIP</button>
+        </div>
+
+        <div class="preview-container">
+            <div id="printable-slip">
+                <img src="https://i.imgur.com/VbZKWAf.png" class="slip-logo">
+                <div style="font-weight: bold; font-size: 12pt; margin-bottom: 10px;">ROUTING SLIP</div>
+                
+                <div id="qr-target" class="qr-box"></div>
+                <div id="display-hex" class="hex-code">-----</div>
+                
+                <div style="margin-top: 15px; width: 100%; text-align: left; font-size: 9pt;">
+                    <strong>Project:</strong> <span id="slip-proj">---</span><br>
+                    <strong>Category:</strong> <span id="slip-cat">---</span><br>
+                    <strong>Route:</strong> <span id="slip-route">---</span>
+                </div>
+                <div id="slip-depts" class="target-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const _supabase = supabase.createClient('https://tywhjkofayqhmwbpzvlg.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d2hqa29mYXlxaG13YnB6dmxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzA2ODYsImV4cCI6MjA5MTIwNjY4Nn0.F-mFKAhn5kRtAU1XOM5jMiT4-zL3P6YJ7Rtj9VGatH4');
+
+        async function processAll() {
+            const btn = document.getElementById('proc-btn');
+            const cat = document.getElementById('category').value;
+            const proj = document.getElementById('project_name').value;
+            const deptInput = document.getElementById('departments').value;
+            const routed = document.getElementById('route_by').value;
+            const takeout = document.getElementById('takeout_by').value;
+
+            if(!cat || !proj || !deptInput) { alert("Fill in Category, Project, and Departments!"); return; }
+
+            btn.disabled = true;
+            btn.innerText = "GENERATING UNIQUE ID...";
+
+            // 1. Generate & Check Hex Uniqueness
+            let isUnique = false;
+            let hex = "";
+            while(!isUnique) {
+                hex = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
+                const { data } = await _supabase.from('combined_routing_logs').select('qr_code').eq('qr_code', hex);
+                if(data.length === 0) isUnique = true;
+            }
+
+            // 2. Format Departments for Array
+            const deptArray = deptInput.split(',').map(d => d.trim()).filter(d => d !== "");
+
+            // 3. Save to Supabase
+            const { error } = await _supabase.from('combined_routing_logs').insert([{
+                category: cat,
+                project_name: proj,
+                qr_code: hex,
+                departments: deptArray,
+                route_by: routed,
+                takeout_by: takeout
+            }]);
+
+            if(error) {
+                alert("Error: " + error.message);
+                btn.disabled = false;
+                btn.innerText = "PROCESS & GENERATE QR";
+            } else {
+                renderSlip(cat, proj, hex, deptArray, routed);
+                document.getElementById('print-btn').style.display = 'block';
+                btn.innerText = "LOGGED SUCCESSFULLY";
+            }
+        }
+
+        function renderSlip(cat, proj, hex, depts, routed) {
+            document.getElementById('slip-cat').innerText = cat;
+            document.getElementById('slip-proj').innerText = proj;
+            document.getElementById('display-hex').innerText = hex;
+            document.getElementById('slip-route').innerText = routed;
+            document.getElementById('slip-depts').innerText = "Destinations: " + depts.join(' ➔ ');
+
+            const qrContainer = document.getElementById('qr-target');
+            qrContainer.innerHTML = "";
+            new QRCode(qrContainer, {
+                text: `https://vallealfrie-png.github.io/Document-Tracker/track.html?id=${hex}`,
+                width: 140, height: 140
+            });
+            document.getElementById('printable-slip').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
