@@ -22,7 +22,7 @@
         .interface-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .doc-summary { font-size: 0.85rem; color: #555; background: #eef6ff; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .doc-summary { font-size: 0.85rem; color: #555; background: #eef6ff; padding: 10px; border-radius: 8px; margin: 15px 25px; text-align: center; }
 
         label { display: block; font-size: 0.7rem; font-weight: 700; color: #666; margin-bottom: 5px; text-transform: uppercase; }
         input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; font-size: 1rem; box-sizing: border-box; }
@@ -32,6 +32,7 @@
         .btn-warning { background: var(--warning); }
         .btn-success { background: var(--success); }
         .btn:active { transform: scale(0.98); }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -55,26 +56,26 @@
         <input type="text" id="rec_name" placeholder="Enter your full name">
         <label>Your Department</label>
         <input type="text" id="rec_dept" placeholder="e.g. Finance, HR">
-        <button class="btn btn-primary" onclick="handleAction('Received')">LOG RECEIPT</button>
+        <button class="btn btn-primary" id="btn-rec" onclick="handleAction('Received')">LOG RECEIPT</button>
     </div>
 
     <div id="view-status" class="interface-content">
-        <label>Department Updating</label>
-        <input type="text" id="stat_dept" placeholder="Current location">
+        <label>Current Department</label>
+        <input type="text" id="stat_dept" placeholder="Where is the document now?">
         <label>Set Signature Status</label>
         <select id="stat_val">
             <option value="Not Signed">❌ Not Signed</option>
             <option value="Signed">✅ Signed / Approved</option>
         </select>
-        <button class="btn btn-warning" onclick="handleAction('Status')">UPDATE & NOTIFY</button>
+        <button class="btn btn-warning" id="btn-stat" onclick="handleAction('Status')">UPDATE & NOTIFY</button>
     </div>
 
     <div id="view-pickup" class="interface-content">
-        <label>Messenger Name</label>
+        <label>Messenger Name (Picked up by)</label>
         <input type="text" id="pick_name" placeholder="Who is taking the document?">
         <label>Releasing Department</label>
-        <input type="text" id="pick_dept" placeholder="Origin department">
-        <button class="btn btn-success" onclick="handleAction('Picked Up')">LOG PICK-UP</button>
+        <input type="text" id="pick_dept" placeholder="Department releasing it">
+        <button class="btn btn-success" id="btn-pick" onclick="handleAction('Picked Up')">LOG PICK-UP</button>
     </div>
 </div>
 
@@ -93,6 +94,10 @@
 
     // Fetch Project Data
     async function init() {
+        if (!qrID) {
+            document.getElementById('display-name').innerText = "Error: No ID found";
+            return;
+        }
         const { data } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', qrID).single();
         if (data) {
             document.getElementById('display-name').innerText = data.project_name;
@@ -100,54 +105,68 @@
         }
     }
 
-    // Single Logic Function to handle all 3 interfaces
     async function handleAction(type) {
-        let name, dept, status, msg;
+        let entryData = {
+            parent_qr_code: qrID,
+            created_at: new Date()
+        };
+        let msg = "";
+        let btn;
 
         if (type === 'Received') {
-            name = document.getElementById('rec_name').value;
-            dept = document.getElementById('rec_dept').value;
-            status = 'Received';
+            const name = document.getElementById('rec_name').value;
+            const dept = document.getElementById('rec_dept').value;
+            if (!name || !dept) return alert("Please fill in Name and Dept");
+            
+            btn = document.getElementById('btn-rec');
+            entryData.received_by = name;
+            entryData.department = dept;
+            entryData.status = 'Received';
             msg = `📥 Document ${qrID} received by ${name} (${dept})`;
         } 
         else if (type === 'Status') {
-            name = "System Update";
-            dept = document.getElementById('stat_dept').value;
-            status = document.getElementById('stat_val').value;
-            msg = `📝 Status Update: ${qrID} marked as ${status} at ${dept}`;
+            const dept = document.getElementById('stat_dept').value;
+            const stat = document.getElementById('stat_val').value;
+            if (!dept) return alert("Please enter the current department");
+
+            btn = document.getElementById('btn-stat');
+            entryData.received_by = 'Update Only'; 
+            entryData.department = dept;
+            entryData.status = stat; 
+            msg = `📝 Status Update: ${qrID} marked as ${stat} at ${dept}`;
         } 
         else if (type === 'Picked Up') {
-            name = document.getElementById('pick_name').value;
-            dept = document.getElementById('pick_dept').value;
-            status = 'Picked Up';
-            msg = `🚚 Document ${qrID} picked up by ${name} from ${dept}`;
+            const messenger = document.getElementById('pick_name').value;
+            const dept = document.getElementById('pick_dept').value;
+            if (!messenger || !dept) return alert("Please enter Messenger Name and Dept");
+
+            btn = document.getElementById('btn-pick');
+            entryData.picked_up_by = messenger; 
+            entryData.department = dept;
+            entryData.status = 'Picked Up';
+            msg = `🚚 Document ${qrID} picked up by ${messenger} from ${dept}`;
         }
 
-        if (!dept || (type !== 'Status' && !name)) {
-            alert("Please complete all fields.");
-            return;
-        }
+        // Prevent double clicking
+        btn.disabled = true;
+        btn.innerText = "PROCESSING...";
 
-        // 1. Log to document_tracking_events (For the Dashboard Table)
-        const { error: logErr } = await _supabase.from('document_tracking_events').insert([{
-            parent_qr_code: qrID,
-            received_by: name,
-            department: dept,
-            status: status
-        }]);
+        // 1. Log Event
+        const { error: logErr } = await _supabase.from('document_tracking_events').insert([entryData]);
 
-        // 2. Send Notification (For the Dashboard Pop-up)
-        const { error: notifErr } = await _supabase.from('document_notifications').insert([{
-            qr_code: qrID,
-            message: msg
-        }]);
-
-        if (!logErr && !notifErr) {
+        // 2. Send Dashboard Notification
+        if (!logErr) {
+            await _supabase.from('document_notifications').insert([{
+                qr_code: qrID,
+                message: msg
+            }]);
             alert(type + " logged successfully!");
-            // Optional: Clear fields
-            if(type === 'Received') document.getElementById('rec_name').value = "";
+            btn.innerText = "SUCCESS";
         } else {
-            alert("Error saving data.");
+            console.error(logErr);
+            alert("Error: " + logErr.message);
+            btn.disabled = false;
+            btn.innerText = "RETRY";
         }
     }
 
