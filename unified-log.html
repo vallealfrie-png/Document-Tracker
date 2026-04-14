@@ -123,17 +123,20 @@
                 if(data.length === 0) isUnique = true;
             }
 
-            // 2. Format Departments for Array
+            // 2. Prepare the Links and Data
             const deptArray = deptInput.split(',').map(d => d.trim()).filter(d => d !== "");
+            const fullLink = `https://vallealfrie-png.github.io/Document-Tracker/track.html?id=${hex}`;
 
-            // 3. Save to Supabase
+            // 3. Save to Supabase (including qr_link)
             const { error } = await _supabase.from('combined_routing_logs').insert([{
                 category: cat,
                 project_name: proj,
                 qr_code: hex,
+                qr_link: fullLink, // Saving the full scan link here
                 departments: deptArray,
                 route_by: routed,
-                takeout_by: takeout
+                takeout_by: takeout,
+                status: 'Active'
             }]);
 
             if(error) {
@@ -141,13 +144,13 @@
                 btn.disabled = false;
                 btn.innerText = "PROCESS & GENERATE QR";
             } else {
-                renderSlip(cat, proj, hex, deptArray, routed);
+                renderSlip(cat, proj, hex, deptArray, routed, fullLink);
                 document.getElementById('print-btn').style.display = 'block';
                 btn.innerText = "LOGGED SUCCESSFULLY";
             }
         }
 
-        function renderSlip(cat, proj, hex, depts, routed) {
+        function renderSlip(cat, proj, hex, depts, routed, link) {
             document.getElementById('slip-cat').innerText = cat;
             document.getElementById('slip-proj').innerText = proj;
             document.getElementById('display-hex').innerText = hex;
@@ -157,8 +160,12 @@
             const qrContainer = document.getElementById('qr-target');
             qrContainer.innerHTML = "";
             new QRCode(qrContainer, {
-                text: `https://vallealfrie-png.github.io/Document-Tracker/track.html?id=${hex}`,
-                width: 140, height: 140
+                text: link, // The QR now encodes the exact tracking URL
+                width: 140, 
+                height: 140,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
             });
             document.getElementById('printable-slip').style.display = 'flex';
         }
