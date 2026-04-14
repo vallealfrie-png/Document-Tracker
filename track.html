@@ -6,26 +6,32 @@
     <title>Document Tracking | PHMC</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #1a73ba; --success: #28a745; --warning: #f39c12; --danger: #d9534f; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; margin: 0; padding: 15px; }
-        .track-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
-        .header { text-align: center; border-bottom: 2px solid #eee; margin-bottom: 20px; padding-bottom: 15px; }
-        .header img { width: 100px; }
+        :root { --primary: #1a73ba; --success: #28a745; --warning: #f39c12; --bg: #f4f7f9; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; }
+        .track-card { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 450px; margin: auto; overflow: hidden; }
         
-        .doc-info { background: #eef6ff; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid var(--primary); font-size: 0.9rem; }
+        .header { text-align: center; padding: 20px; background: #fff; border-bottom: 1px solid #eee; }
+        .header img { width: 90px; }
         
-        /* Step Sections */
-        .step-section { border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 20px; background: #fff; }
-        .step-title { font-size: 0.8rem; font-weight: bold; color: var(--primary); text-transform: uppercase; margin-bottom: 12px; display: block; }
+        /* Tab Navigation */
+        .tab-menu { display: flex; background: #f8f9fa; border-bottom: 1px solid #eee; }
+        .tab-btn { flex: 1; padding: 15px 5px; border: none; background: none; font-size: 0.75rem; font-weight: bold; color: #888; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: #fff; }
+
+        .interface-content { padding: 25px; display: none; animation: fadeIn 0.3s ease; }
+        .interface-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .doc-summary { font-size: 0.85rem; color: #555; background: #eef6ff; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+
+        label { display: block; font-size: 0.7rem; font-weight: 700; color: #666; margin-bottom: 5px; text-transform: uppercase; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; font-size: 1rem; box-sizing: border-box; }
         
-        label { display: block; font-size: 0.7rem; font-weight: bold; color: #666; margin-bottom: 4px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px; font-size: 1rem; box-sizing: border-box; }
-        
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
-        .btn-receive { background: var(--primary); color: white; }
-        .btn-status { background: var(--warning); color: white; }
-        .btn-pickup { background: var(--success); color: white; }
-        .btn:disabled { background: #ccc; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; color: white; transition: 0.2s; }
+        .btn-primary { background: var(--primary); }
+        .btn-warning { background: var(--warning); }
+        .btn-success { background: var(--success); }
+        .btn:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
@@ -33,38 +39,42 @@
 <div class="track-card">
     <div class="header">
         <img src="https://i.imgur.com/VbZKWAf.png" alt="PHMC Logo">
-        <h2 style="margin:0; font-size: 1.1rem;">Document Tracking Portal</h2>
+        <div id="display-name" style="font-weight: bold; margin-top: 10px; color: #333;">Loading Project...</div>
     </div>
 
-    <div id="doc-details" class="doc-info">
-        <strong id="display-name">Loading...</strong><br>
-        <span id="display-id" style="font-family: monospace;">ID: ---</span>
+    <div class="tab-menu">
+        <button class="tab-btn active" onclick="switchTab(event, 'view-receive')">1. Received</button>
+        <button class="tab-btn" onclick="switchTab(event, 'view-status')">2. Status</button>
+        <button class="tab-btn" onclick="switchTab(event, 'view-pickup')">3. Pick-up</button>
     </div>
 
-    <div class="step-section">
-        <span class="step-title">Step 1: Receive Document</span>
+    <div class="doc-summary" id="display-id">ID: ---</div>
+
+    <div id="view-receive" class="interface-content active">
         <label>Your Name (Receiver)</label>
-        <input type="text" id="received_by" placeholder="Full Name">
-        <label>Current Department</label>
-        <input type="text" id="dept" placeholder="e.g. HR, Finance">
-        <button class="btn btn-receive" onclick="logReceive()">LOG RECEIPT</button>
+        <input type="text" id="rec_name" placeholder="Enter your full name">
+        <label>Your Department</label>
+        <input type="text" id="rec_dept" placeholder="e.g. Finance, HR">
+        <button class="btn btn-primary" onclick="handleAction('Received')">LOG RECEIPT</button>
     </div>
 
-    <div class="step-section">
-        <span class="step-title">Step 2: Sign-off Status</span>
-        <label>Action Taken</label>
-        <select id="status">
-            <option value="Not Signed">Mark as: Not Signed</option>
-            <option value="Signed">Mark as: Signed / Approved</option>
+    <div id="view-status" class="interface-content">
+        <label>Department Updating</label>
+        <input type="text" id="stat_dept" placeholder="Current location">
+        <label>Set Signature Status</label>
+        <select id="stat_val">
+            <option value="Not Signed">❌ Not Signed</option>
+            <option value="Signed">✅ Signed / Approved</option>
         </select>
-        <button class="btn btn-status" onclick="logStatus()">UPDATE STATUS & NOTIFY</button>
+        <button class="btn btn-warning" onclick="handleAction('Status')">UPDATE & NOTIFY</button>
     </div>
 
-    <div class="step-section" style="border-color: var(--success);">
-        <span class="step-title">Step 3: Pick-up / Take out</span>
-        <label>Picked up by (Messenger Name)</label>
-        <input type="text" id="picked_up_by" placeholder="Name of person taking it">
-        <button class="btn btn-pickup" onclick="logPickup()">LOG PICKUP</button>
+    <div id="view-pickup" class="interface-content">
+        <label>Messenger Name</label>
+        <input type="text" id="pick_name" placeholder="Who is taking the document?">
+        <label>Releasing Department</label>
+        <input type="text" id="pick_dept" placeholder="Origin department">
+        <button class="btn btn-success" onclick="handleAction('Picked Up')">LOG PICK-UP</button>
     </div>
 </div>
 
@@ -73,7 +83,16 @@
     const params = new URLSearchParams(window.location.search);
     const qrID = params.get('id');
 
-    async function loadInfo() {
+    // UI Tab Logic
+    function switchTab(evt, tabId) {
+        document.querySelectorAll('.interface-content').forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        evt.currentTarget.classList.add('active');
+    }
+
+    // Fetch Project Data
+    async function init() {
         const { data } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', qrID).single();
         if (data) {
             document.getElementById('display-name').innerText = data.project_name;
@@ -81,59 +100,58 @@
         }
     }
 
-    // Helper: Sends alert to Dashboard
-    async function dashNotify(msg) {
-        await _supabase.from('document_notifications').insert([{ qr_code: qrID, message: msg }]);
-    }
+    // Single Logic Function to handle all 3 interfaces
+    async function handleAction(type) {
+        let name, dept, status, msg;
 
-    // ACTION 1: RECEIVE
-    async function logReceive() {
-        const name = document.getElementById('received_by').value;
-        const dept = document.getElementById('dept').value;
-        if(!name || !dept) return alert("Fill Name and Dept");
+        if (type === 'Received') {
+            name = document.getElementById('rec_name').value;
+            dept = document.getElementById('rec_dept').value;
+            status = 'Received';
+            msg = `📥 Document ${qrID} received by ${name} (${dept})`;
+        } 
+        else if (type === 'Status') {
+            name = "System Update";
+            dept = document.getElementById('stat_dept').value;
+            status = document.getElementById('stat_val').value;
+            msg = `📝 Status Update: ${qrID} marked as ${status} at ${dept}`;
+        } 
+        else if (type === 'Picked Up') {
+            name = document.getElementById('pick_name').value;
+            dept = document.getElementById('pick_dept').value;
+            status = 'Picked Up';
+            msg = `🚚 Document ${qrID} picked up by ${name} from ${dept}`;
+        }
 
-        const { error } = await _supabase.from('document_tracking_events').insert([{
-            parent_qr_code: qrID, received_by: name, department: dept, status: 'Received'
+        if (!dept || (type !== 'Status' && !name)) {
+            alert("Please complete all fields.");
+            return;
+        }
+
+        // 1. Log to document_tracking_events (For the Dashboard Table)
+        const { error: logErr } = await _supabase.from('document_tracking_events').insert([{
+            parent_qr_code: qrID,
+            received_by: name,
+            department: dept,
+            status: status
         }]);
 
-        if (!error) {
-            await dashNotify(`📥 ${qrID} received by ${name} (${dept})`);
-            alert("Received logged!");
+        // 2. Send Notification (For the Dashboard Pop-up)
+        const { error: notifErr } = await _supabase.from('document_notifications').insert([{
+            qr_code: qrID,
+            message: msg
+        }]);
+
+        if (!logErr && !notifErr) {
+            alert(type + " logged successfully!");
+            // Optional: Clear fields
+            if(type === 'Received') document.getElementById('rec_name').value = "";
+        } else {
+            alert("Error saving data.");
         }
     }
 
-    // ACTION 2: STATUS
-    async function logStatus() {
-        const stat = document.getElementById('status').value;
-        const dept = document.getElementById('dept').value || "Current Dept";
-        
-        const { error } = await _supabase.from('document_tracking_events').insert([{
-            parent_qr_code: qrID, status: stat, department: dept, received_by: 'Status Update'
-        }]);
-
-        if (!error) {
-            await dashNotify(`📝 ${qrID} status updated to: ${stat}`);
-            alert("Status updated!");
-        }
-    }
-
-    // ACTION 3: PICKUP
-    async function logPickup() {
-        const messenger = document.getElementById('picked_up_by').value;
-        const dept = document.getElementById('dept').value || "Current Dept";
-        if(!messenger) return alert("Enter Messenger Name");
-
-        const { error } = await _supabase.from('document_tracking_events').insert([{
-            parent_qr_code: qrID, received_by: messenger, department: dept, status: 'Picked Up'
-        }]);
-
-        if (!error) {
-            await dashNotify(`🚚 ${qrID} picked up by ${messenger} from ${dept}`);
-            alert("Pickup logged!");
-        }
-    }
-
-    loadInfo();
+    init();
 </script>
 </body>
 </html>
