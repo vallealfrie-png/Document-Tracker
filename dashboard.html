@@ -142,24 +142,29 @@
         }
     }
 
-    function startListener() {
-        // Listen for new notifications to trigger sound/toast
-        _supabase
-            .channel('notifications')
-            .on('postgres_changes', { event: 'INSERT', table: 'document_notifications' }, payload => {
-                showToast(payload.new.message);
-                loadDashboard(); // Auto refresh tables
-            })
-            .subscribe();
+    // REPLACE your startListener function with this:
+function startListener() {
+    console.log("🚀 Realtime: Initializing...");
 
-        // Listen for new tracking events to refresh table immediately
-        _supabase
-            .channel('tracking')
-            .on('postgres_changes', { event: 'INSERT', table: 'document_tracking_events' }, () => {
-                loadDashboard();
-            })
-            .subscribe();
-    }
+    // This channel handles the pop-up notification
+    _supabase
+        .channel('dashboard-results')
+        .on('postgres_changes', 
+            { 
+                event: 'INSERT', 
+                schema: 'public', // CRITICAL: Specify the schema
+                table: 'document_notifications' 
+            }, 
+            (payload) => {
+                console.log("🔔 NOTIFICATION DATA:", payload);
+                showToast(payload.new.message);
+                loadDashboard(); // Refresh tables
+            }
+        )
+        .subscribe((status) => {
+            console.log("📡 Connection Status:", status);
+        });
+}
 
     function showToast(msg) {
         const toast = document.getElementById('notification-toast');
