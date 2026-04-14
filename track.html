@@ -2,69 +2,118 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Document Tracking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Tracking | PHMC</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; padding: 20px; display: flex; justify-content: center; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-        .doc-header { border-bottom: 2px solid #1a73ba; margin-bottom: 20px; padding-bottom: 10px; }
-        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-        label { font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 5px; }
-        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-save { background: #1a73ba; color: white; }
-        .btn-notify { background: #f0ad4e; color: white; }
+        :root { --primary: #1a73ba; --success: #28a745; --warning: #f0ad4e; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        
+        .track-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        .header { text-align: center; border-bottom: 2px solid #eee; margin-bottom: 20px; padding-bottom: 15px; }
+        .header img { width: 120px; margin-bottom: 10px; }
+        
+        .doc-info { background: #eef6ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid var(--primary); }
+        .doc-info h3 { margin: 0; color: var(--primary); font-size: 1.1rem; }
+        .doc-info p { margin: 5px 0 0; font-size: 0.9rem; color: #555; }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.75rem; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+        
+        .btn-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .btn { padding: 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; }
+        .btn-log { background: var(--primary); color: white; }
+        .btn-notify { background: var(--warning); color: white; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .success-msg { color: var(--success); font-weight: bold; text-align: center; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <div class="doc-header">
-        <h2 id="doc-name" style="margin:0;">Loading...</h2>
-        <small id="doc-id" style="color:#888;"></small>
+<div class="track-card">
+    <div class="header">
+        <img src="https://i.imgur.com/VbZKWAf.png" alt="PHMC Logo">
+        <h2 style="margin:0; font-size: 1.2rem;">Tracking Portal</h2>
+    </div>
+
+    <div id="loading">Loading document details...</div>
+    <div id="doc-details" class="doc-info" style="display:none;">
+        <h3 id="display-name">Project Name</h3>
+        <p id="display-cat">Category: ---</p>
+        <p id="display-id" style="font-family: monospace; font-weight: bold;">ID: -----</p>
     </div>
 
     <div class="form-group">
-        <label>Received By</label>
-        <input type="text" id="received_by" placeholder="Your Name">
+        <label>Received By (Your Name)</label>
+        <input type="text" id="received_by" placeholder="Full Name">
     </div>
 
     <div class="form-group">
-        <label>Department</label>
-        <input type="text" id="dept" placeholder="Current Dept">
+        <label>Current Department</label>
+        <input type="text" id="dept" placeholder="e.g., HR, Finance, Admin">
     </div>
 
     <div class="form-group">
-        <label>Signature Status</label>
+        <label>Document Status</label>
         <select id="status">
             <option value="Not Signed">Not Signed</option>
             <option value="Signed">Signed</option>
         </select>
     </div>
 
-    <button class="btn btn-save" onclick="updateTracking()">LOG RECEIPT</button>
-    <button class="btn btn-notify" onclick="sendNotification()">NOTIFY SENDER</button>
+    <div class="btn-stack">
+        <button class="btn btn-log" id="log-btn" onclick="submitTrackEvent()">LOG RECEIPT</button>
+        <button class="btn btn-notify" id="notify-btn" onclick="sendNotification()">SEND NOTIFICATION</button>
+    </div>
+    
+    <div id="success-feedback" class="success-msg">✓ Data saved successfully!</div>
 </div>
 
 <script>
-    const _supabase = supabase.createClient('YOUR_URL', 'YOUR_KEY');
-    
-    // 1. Get QR Code from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const qrID = urlParams.get('id');
-    document.getElementById('doc-id').innerText = "ID: " + qrID;
+    const _supabase = supabase.createClient('https://tywhjkofayqhmwbpzvlg.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d2hqa29mYXlxaG13YnB6dmxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzA2ODYsImV4cCI6MjA5MTIwNjY4Nn0.F-mFKAhn5kRtAU1XOM5jMiT4-zL3P6YJ7Rtj9VGatH4');
 
-    // 2. Fetch Document Info
-    async function loadDoc() {
-        const { data } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', qrID).single();
-        if(data) document.getElementById('doc-name').innerText = data.project_name;
+    // 1. Get QR Code ID from the URL
+    const params = new URLSearchParams(window.location.search);
+    const qrID = params.get('id');
+
+    async function fetchDocumentDetails() {
+        if (!qrID) {
+            document.getElementById('loading').innerText = "Error: No Tracking ID found in URL.";
+            return;
+        }
+
+        const { data, error } = await _supabase
+            .from('combined_routing_logs')
+            .select('*')
+            .eq('qr_code', qrID)
+            .single();
+
+        if (error || !data) {
+            document.getElementById('loading').innerText = "Document not found in database.";
+        } else {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('doc-details').style.display = 'block';
+            document.getElementById('display-name').innerText = data.project_name;
+            document.getElementById('display-cat').innerText = "Category: " + data.category;
+            document.getElementById('display-id').innerText = "ID: " + data.qr_code;
+        }
     }
 
-    // 3. Log the update
-    async function updateTracking() {
+    async function submitTrackEvent() {
         const name = document.getElementById('received_by').value;
         const dept = document.getElementById('dept').value;
         const status = document.getElementById('status').value;
+        const btn = document.getElementById('log-btn');
+
+        if (!name || !dept) {
+            alert("Please fill in your name and department.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "SAVING...";
 
         const { error } = await _supabase.from('document_tracking_events').insert([{
             parent_qr_code: qrID,
@@ -73,21 +122,42 @@
             status: status
         }]);
 
-        if(!error) alert("Tracking Updated!");
+        if (error) {
+            alert("Error: " + error.message);
+            btn.disabled = false;
+            btn.innerText = "LOG RECEIPT";
+        } else {
+            document.getElementById('success-feedback').style.display = 'block';
+            btn.innerText = "LOGGED";
+            // Disable notify button temporarily to prevent double clicking
+            setTimeout(() => { document.getElementById('success-feedback').style.display = 'none'; }, 3000);
+        }
     }
 
-    // 4. Notification Logic
     async function sendNotification() {
-        const dept = document.getElementById('dept').value;
+        const dept = document.getElementById('dept').value || "Destination";
+        const nBtn = document.getElementById('notify-btn');
+
+        nBtn.disabled = true;
+        nBtn.innerText = "NOTIFYING...";
+
         const { error } = await _supabase.from('document_notifications').insert([{
             qr_code: qrID,
-            message: `Document ${qrID} has arrived at ${dept}.`
+            message: `Document [${qrID}] has been received at ${dept}.`
         }]);
-        
-        if(!error) alert("Notification sent to sender!");
+
+        if (error) {
+            alert("Notification failed: " + error.message);
+            nBtn.disabled = false;
+            nBtn.innerText = "SEND NOTIFICATION";
+        } else {
+            alert("Sender has been notified!");
+            nBtn.innerText = "NOTIFIED";
+        }
     }
 
-    loadDoc();
+    // Run on load
+    fetchDocumentDetails();
 </script>
 </body>
 </html>
