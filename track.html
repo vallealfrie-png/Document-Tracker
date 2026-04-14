@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document Tracking</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        .doc-header { border-bottom: 2px solid #1a73ba; margin-bottom: 20px; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+        label { font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 5px; }
+        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-save { background: #1a73ba; color: white; }
+        .btn-notify { background: #f0ad4e; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="doc-header">
+        <h2 id="doc-name" style="margin:0;">Loading...</h2>
+        <small id="doc-id" style="color:#888;"></small>
+    </div>
+
+    <div class="form-group">
+        <label>Received By</label>
+        <input type="text" id="received_by" placeholder="Your Name">
+    </div>
+
+    <div class="form-group">
+        <label>Department</label>
+        <input type="text" id="dept" placeholder="Current Dept">
+    </div>
+
+    <div class="form-group">
+        <label>Signature Status</label>
+        <select id="status">
+            <option value="Not Signed">Not Signed</option>
+            <option value="Signed">Signed</option>
+        </select>
+    </div>
+
+    <button class="btn btn-save" onclick="updateTracking()">LOG RECEIPT</button>
+    <button class="btn btn-notify" onclick="sendNotification()">NOTIFY SENDER</button>
+</div>
+
+<script>
+    const _supabase = supabase.createClient('YOUR_URL', 'YOUR_KEY');
+    
+    // 1. Get QR Code from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const qrID = urlParams.get('id');
+    document.getElementById('doc-id').innerText = "ID: " + qrID;
+
+    // 2. Fetch Document Info
+    async function loadDoc() {
+        const { data } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', qrID).single();
+        if(data) document.getElementById('doc-name').innerText = data.project_name;
+    }
+
+    // 3. Log the update
+    async function updateTracking() {
+        const name = document.getElementById('received_by').value;
+        const dept = document.getElementById('dept').value;
+        const status = document.getElementById('status').value;
+
+        const { error } = await _supabase.from('document_tracking_events').insert([{
+            parent_qr_code: qrID,
+            received_by: name,
+            department: dept,
+            status: status
+        }]);
+
+        if(!error) alert("Tracking Updated!");
+    }
+
+    // 4. Notification Logic
+    async function sendNotification() {
+        const dept = document.getElementById('dept').value;
+        const { error } = await _supabase.from('document_notifications').insert([{
+            qr_code: qrID,
+            message: `Document ${qrID} has arrived at ${dept}.`
+        }]);
+        
+        if(!error) alert("Notification sent to sender!");
+    }
+
+    loadDoc();
+</script>
+</body>
+</html>
