@@ -79,7 +79,7 @@
         /* --- PRINTABLE SLIP --- */
         #printable-slip {
             background: white;
-            padding: 0 40px; /* Padding for horizontal content */
+            padding: 0 40px;
             display: none; 
             flex-direction: column;
             width: 100%;
@@ -98,7 +98,6 @@
         .slip-body { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
         .details-area { flex: 1; }
         
-        /* Fixed: Ensuring h2 shows during print */
         #slip-proj { 
             margin: 0 0 10px 0; 
             font-size: 18pt; 
@@ -108,7 +107,7 @@
         }
         
         .info-row { font-size: 11pt; margin-bottom: 6px; }
-        .info-row strong { width: 100px; display: inline-block; color: #444; }
+        .info-row strong { width: 140px; display: inline-block; color: #444; }
 
         .qr-side { text-align: center; padding-left: 20px; }
         .hex-display { font-family: monospace; font-size: 18pt; font-weight: bold; border: 2px solid #000; padding: 5px 10px; display: block; margin-top: 8px; }
@@ -121,7 +120,7 @@
             color: #299c29;
             margin-top: 20px;
             padding-bottom: 15px;
-            border-bottom: 4px solid #299c29; /* Bottom border matching top length */
+            border-bottom: 4px solid #299c29; 
             letter-spacing: 1px;
         }
 
@@ -145,8 +144,8 @@
             <div class="form-grid">
                 <div class="form-group"><label>Category</label><input list="cat-list" id="category"><datalist id="cat-list"></datalist></div>
                 <div class="form-group"><label>Project Name</label><input type="text" id="project_name"></div>
-                <div class="form-group"><label>Route</label><input type="text" id="departments" placeholder="Optional"></div>
-                <div class="form-group"><label>Staff</label><input type="text" id="route_by"></div>
+                <div class="form-group"><label>Department Origin</label><input type="text" id="origin_dept"></div>
+                <div class="form-group"><label>Staff Name</label><input type="text" id="staff_name"></div>
             </div>
             <button class="btn-primary" id="proc-btn" onclick="processAll()">SAVE & GENERATE</button>
         </div>
@@ -169,7 +168,8 @@
                 <div class="details-area">
                     <h2 id="slip-proj">---</h2>
                     <div class="info-row"><strong>CATEGORY:</strong> <span id="slip-cat">---</span></div>
-                    <div class="info-row"><strong>STAFF:</strong> <span id="slip-route">---</span></div>
+                    <div class="info-row"><strong>ORIGIN DEPT:</strong> <span id="slip-origin">---</span></div>
+                    <div class="info-row"><strong>STAFF:</strong> <span id="slip-staff">---</span></div>
                     <div class="info-row"><strong>DATE:</strong> <span id="slip-date">---</span></div>
                 </div>
 
@@ -198,8 +198,8 @@
             const btn = document.getElementById('proc-btn');
             const cat = document.getElementById('category').value;
             const proj = document.getElementById('project_name').value;
-            const depts = document.getElementById('departments').value;
-            const staff = document.getElementById('route_by').value;
+            const origin = document.getElementById('origin_dept').value;
+            const staff = document.getElementById('staff_name').value;
 
             if(!cat || !proj) return alert("Fill Name and Category");
 
@@ -208,16 +208,24 @@
             const fullLink = `https://vallealfrie-png.github.io/Document-Tracker/track.html?id=${hex}`;
 
             const { error } = await _supabase.from('combined_routing_logs').insert([{
-                category: cat, project_name: proj, qr_code: hex, qr_link: fullLink, 
-                departments: depts.split(','), route_by: staff, status: 'Active'
+                category: cat, 
+                project_name: proj, 
+                qr_code: hex, 
+                qr_link: fullLink, 
+                origin_dept: origin, // Updated field name
+                staff_name: staff,   // Assuming you have this column or it saves to a 'staff' column
+                status: 'Active'
             }]);
 
             if(!error) {
-                renderSlip(cat, proj, hex, staff, fullLink);
+                renderSlip(cat, proj, hex, origin, staff, fullLink);
                 document.getElementById('print-btn').style.display = 'block';
                 btn.innerText = "SAVED";
                 loadCategories();
-            } else { btn.disabled = false; }
+            } else { 
+                alert("Error: " + error.message);
+                btn.disabled = false; 
+            }
         }
 
         async function reprintSlip() {
@@ -225,18 +233,19 @@
             if(!searchId) return;
             const { data } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', searchId).single();
             if (data) {
-                renderSlip(data.category, data.project_name, data.qr_code, data.route_by, data.qr_link);
+                renderSlip(data.category, data.project_name, data.qr_code, data.origin_dept, data.staff_name, data.qr_link);
                 document.getElementById('print-btn').style.display = 'block';
             } else {
                 alert("ID not found.");
             }
         }
 
-        function renderSlip(cat, proj, hex, staff, link) {
+        function renderSlip(cat, proj, hex, origin, staff, link) {
             document.getElementById('slip-cat').innerText = cat;
             document.getElementById('slip-proj').innerText = proj;
             document.getElementById('display-hex').innerText = hex;
-            document.getElementById('slip-route').innerText = staff;
+            document.getElementById('slip-origin').innerText = origin || "N/A";
+            document.getElementById('slip-staff').innerText = staff || "N/A";
             document.getElementById('slip-date').innerText = new Date().toLocaleDateString();
 
             const qrContainer = document.getElementById('qr-target');
