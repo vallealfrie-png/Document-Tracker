@@ -30,31 +30,30 @@
         /* --- PRINTABLE SLIP --- */
         #printable-slip {
             background: white;
-            padding: 20px 40px;
+            padding: 10px 40px;
             display: none; 
             flex-direction: column;
             width: 100%;
-            /* Border Top preset color */
-            border-top: 4px solid #33c933;
-            /* Border Bottom preset color */
-            border-bottom: 4px solid #33c933;
+            border-bottom: 4px solid #299c29; /* Bottom Border */
         }
 
         .slip-header { 
             width: 100%; 
             display: flex; 
             justify-content: center;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            padding: 10px 0;
+            /* Top border is now visually after the logo */
+            border-bottom: 4px solid #299c29; 
+            margin-bottom: 20px;
         }
-        .slip-logo { width: 220px; height: auto; object-fit: contain; }
+        .slip-logo { width: 350px; height: auto; object-fit: contain; }
         
         .slip-body { display: flex; justify-content: space-between; align-items: center; }
         .details-area { flex: 1; }
-        .details-area h2 { margin: 0 0 10px 0; font-size: 16pt; color: #1a73ba; text-transform: uppercase; }
+        .details-area h2 { margin: 0 0 10px 0; font-size: 18pt; color: #1a73ba; text-transform: uppercase; }
         
-        .info-row { font-size: 10pt; margin-bottom: 5px; }
-        .info-row strong { width: 90px; display: inline-block; color: #444; }
+        .info-row { font-size: 11pt; margin-bottom: 6px; }
+        .info-row strong { width: 100px; display: inline-block; color: #444; }
 
         .qr-side { text-align: center; padding-left: 20px; }
         .hex-display { font-family: monospace; font-size: 18pt; font-weight: bold; border: 2px solid #000; padding: 5px 10px; display: block; margin-top: 8px; }
@@ -63,9 +62,10 @@
             text-align: center;
             font-weight: bold;
             font-style: italic;
-            font-size: 12pt;
-            color: #33c933;
-            margin-top: 15px;
+            font-size: 13pt;
+            color: #299c29;
+            margin-top: 20px;
+            padding-bottom: 10px;
             letter-spacing: 1px;
         }
 
@@ -75,7 +75,7 @@
             #printable-slip { 
                 display: flex !important; 
                 position: absolute; top: 0; left: 0; 
-                width: 210mm; height: 110mm; 
+                width: 210mm; height: 125mm; 
             }
             @page { size: A4 portrait; margin: 0; }
         }
@@ -183,7 +183,7 @@
 
             const qrContainer = document.getElementById('qr-target');
             qrContainer.innerHTML = "";
-            new QRCode(qrContainer, { text: link, width: 100, height: 100 });
+            new QRCode(qrContainer, { text: link, width: 110, height: 110 });
             document.getElementById('printable-slip').style.display = 'flex';
         }
 
