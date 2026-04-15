@@ -18,6 +18,22 @@
         /* Sound Status Bar */
         #sound-status { cursor: pointer; padding: 15px; background: #fff3cd; text-align: center; border-radius: 8px; margin-bottom: 20px; font-weight: bold; border: 2px dashed #f39c12; transition: 0.3s; }
 
+        /* Pulsing Animation */
+        @keyframes pulse-soft {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.03); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pulse-text { 
+            display: inline-block;
+            animation: pulse-soft 2s infinite ease-in-out; 
+            color: var(--primary); 
+            font-weight: bold; 
+        }
+        .pulse-badge { 
+            animation: pulse-soft 2s infinite ease-in-out; 
+        }
+
         /* Collapsible Table Styles */
         .table-container { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
         .table-header { padding: 15px 20px; background: #fff; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -31,9 +47,9 @@
         .doc-row:hover { background: #f9f9f9; }
         .history-row { display: none; background: #f1f4f8; }
         .history-row td { padding: 0; }
-        .history-container { padding: 15px 40px; border-left: 10px solid var(--primary); }
+        .history-container { padding: 20px 40px; border-left: 10px solid var(--primary); }
         
-        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; display: inline-block; }
+        .status-badge { padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
         .status-signed { background: #d4edda; color: #155724; }
         .status-not-signed { background: #f8d7da; color: #721c24; }
         .status-received { background: #cce5ff; color: #004085; }
@@ -100,7 +116,6 @@
     
     let audioEnabled = false;
 
-    // Unlocks audio for the session
     function enableAudio() {
         audioEnabled = true;
         const sound = document.getElementById('notif-sound');
@@ -142,11 +157,11 @@
             mainRow.className = 'doc-row';
             mainRow.onclick = () => toggleHistory(qr);
             mainRow.innerHTML = `
-                <td>${new Date(latest.created_at).toLocaleDateString()} ${new Date(latest.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+                <td>${new Date(latest.created_at).toLocaleDateString()} <br><small>${new Date(latest.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small></td>
                 <td><strong>${pName}</strong><br><small style="color:#888;">${qr}</small></td>
-                <td><span style="color:var(--primary); font-weight:bold;">${latest.department}</span></td>
+                <td><span class="pulse-text">${latest.department}</span></td>
                 <td>${handledBy}</td>
-                <td><span class="status-badge ${getStatusClass(latest.status)}">${latest.status}</span></td>
+                <td><span class="status-badge pulse-badge ${getStatusClass(latest.status)}">${latest.status}</span></td>
             `;
 
             const historyRow = document.createElement('tr');
@@ -155,15 +170,24 @@
             historyRow.innerHTML = `
                 <td colspan="5">
                     <div class="history-container">
-                        <h4 style="margin-top:0; color:#666;">Audit Trail:</h4>
-                        <table style="background:white; border-radius:5px;">
-                            ${history.map(h => `
-                                <tr>
-                                    <td style="border:none; color:#777;">${new Date(h.created_at).toLocaleTimeString()}</td>
-                                    <td style="border:none;"><strong>${h.status}</strong> at ${h.department}</td>
-                                    <td style="border:none;">By: ${h.status === 'Picked Up' ? (h.picked_up_by || '---') : (h.received_by || '---')}</td>
+                        <h4 style="margin-top:0; color:#444; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Full Audit Trail (Recent First)</h4>
+                        <table style="background:white; border-radius:5px; margin-top:10px;">
+                            <thead>
+                                <tr style="background:#eee;">
+                                    <th style="font-size:0.65rem; padding:8px;">Date & Time</th>
+                                    <th style="font-size:0.65rem; padding:8px;">Action / Location</th>
+                                    <th style="font-size:0.65rem; padding:8px;">Handled By</th>
                                 </tr>
-                            `).join('')}
+                            </thead>
+                            <tbody>
+                                ${history.map(h => `
+                                    <tr>
+                                        <td style="font-size:0.8rem; border:none; color:#555;">${new Date(h.created_at).toLocaleDateString()} <small>${new Date(h.created_at).toLocaleTimeString()}</small></td>
+                                        <td style="font-size:0.8rem; border:none;"><strong>${h.status}</strong> at ${h.department}</td>
+                                        <td style="font-size:0.8rem; border:none;">${h.status === 'Picked Up' ? (h.picked_up_by || '---') : (h.received_by || '---')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
                         </table>
                     </div>
                 </td>
@@ -186,7 +210,6 @@
         return 'status-not-signed';
     }
 
-    // THE ALERT LOGIC (Plays sound 3 times)
     function triggerAlert(msg, isReminder = false) {
         const toast = document.getElementById('notification-toast');
         const sound = document.getElementById('notif-sound');
@@ -207,11 +230,8 @@
         setTimeout(() => { toast.style.display = 'none'; }, 10000);
     }
 
-    // 5-MINUTE REMINDER CHECK
     async function runReminderCheck() {
-        console.log("⏰ Running Reminder Check...");
         const timeLimit = new Date(Date.now() - 120 * 60 * 1000).toISOString();
-        
         const { data: recentItems } = await _supabase
             .from('document_tracking_events')
             .select('parent_qr_code, status')
@@ -235,7 +255,6 @@
     }
 
     setInterval(runReminderCheck, 5 * 60 * 1000);
-    
     loadDashboard();
     startListener();
 </script>
