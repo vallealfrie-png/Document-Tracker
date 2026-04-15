@@ -15,6 +15,9 @@
         .stat-card h3 { margin: 0; font-size: 0.8rem; color: #888; text-transform: uppercase; }
         .stat-card p { margin: 10px 0 0; font-size: 1.8rem; font-weight: bold; color: #333; }
 
+        /* Sound Status Bar */
+        #sound-status { cursor: pointer; padding: 15px; background: #fff3cd; text-align: center; border-radius: 8px; margin-bottom: 20px; font-weight: bold; border: 2px dashed #f39c12; transition: 0.3s; }
+
         /* Collapsible Table Styles */
         .table-container { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
         .table-header { padding: 15px 20px; background: #fff; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -24,7 +27,6 @@
         th { background: #f8f9fa; color: #666; padding: 12px 20px; text-align: left; font-size: 0.75rem; text-transform: uppercase; }
         td { padding: 12px 20px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
         
-        /* Accordion Effect */
         .doc-row { cursor: pointer; transition: background 0.2s; }
         .doc-row:hover { background: #f9f9f9; }
         .history-row { display: none; background: #f1f4f8; }
@@ -48,12 +50,16 @@
 </head>
 <body>
 
-<audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+<audio id="notif-sound" src="https://raw.githubusercontent.com/vallealfrie-png/Document-Tracker/main/mixkit-urgent-simple-tone-loop-2976.wav" preload="auto"></audio>
 
 <div class="dashboard-container">
     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
         <img src="https://i.imgur.com/VbZKWAf.png" alt="Logo" style="height: 40px;">
         <h1 style="color: #333; margin: 0;">PHMC Document Control Center</h1>
+    </div>
+
+    <div id="sound-status" onclick="enableAudio()">
+        🔊 Click here to ACTIVATE "Alert Alert" Sounds
     </div>
 
     <div class="stats-grid">
@@ -65,7 +71,7 @@
 
     <div class="table-container" style="border-top: 4px solid var(--success);">
         <div class="table-header">
-            <h2>LIVE TRACKING LOG (Click Row to see History)</h2>
+            <h2>LIVE TRACKING LOG (Click Row for History)</h2>
         </div>
         <table>
             <thead>
@@ -91,20 +97,30 @@
 
 <script>
     const _supabase = supabase.createClient('https://tywhjkofayqhmwbpzvlg.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d2hqa29mYXlxaG13YnB6dmxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzA2ODYsImV4cCI6MjA5MTIwNjY4Nn0.F-mFKAhn5kRtAU1XOM5jMiT4-zL3P6YJ7Rtj9VGatH4');
+    
+    let audioEnabled = false;
+
+    // Unlocks audio for the session
+    function enableAudio() {
+        audioEnabled = true;
+        const sound = document.getElementById('notif-sound');
+        sound.play().then(() => {
+            sound.pause(); 
+            document.getElementById('sound-status').style.background = '#d4edda';
+            document.getElementById('sound-status').style.border = '2px solid #28a745';
+            document.getElementById('sound-status').innerHTML = "✅ SYSTEM LIVE: Alert Sounds Enabled";
+        });
+    }
 
     async function loadDashboard() {
-        // 1. Fetch Master List for Project Names
         const { data: masterDocs } = await _supabase.from('combined_routing_logs').select('qr_code, project_name');
         const nameMap = Object.fromEntries(masterDocs.map(d => [d.qr_code, d.project_name]));
 
-        // 2. Fetch All Tracking Events
         const { data: scans } = await _supabase.from('document_tracking_events').select('*').order('created_at', { ascending: false });
 
-        // Update Stats
         document.getElementById('count-outgoing').innerText = masterDocs?.length || 0;
         document.getElementById('count-scans').innerText = scans?.length || 0;
 
-        // 3. Group scans by QR Code for the collapsible view
         const grouped = {};
         scans.forEach(s => {
             if (!grouped[s.parent_qr_code]) grouped[s.parent_qr_code] = [];
@@ -118,13 +134,10 @@
 
         Object.keys(grouped).forEach(qr => {
             const history = grouped[qr];
-            const latest = history[0]; // Latest is first because of Supabase ordering
+            const latest = history[0];
             const pName = nameMap[qr] || "Unknown Project";
-            
-            // Logic for "Handled By": If Picked Up, show picked_up_by, otherwise received_by
             const handledBy = latest.status === 'Picked Up' ? latest.picked_up_by : latest.received_by;
             
-            // Render the Main Row (latest status)
             const mainRow = document.createElement('tr');
             mainRow.className = 'doc-row';
             mainRow.onclick = () => toggleHistory(qr);
@@ -136,20 +149,19 @@
                 <td><span class="status-badge ${getStatusClass(latest.status)}">${latest.status}</span></td>
             `;
 
-            // Render the Hidden History Row
             const historyRow = document.createElement('tr');
             historyRow.id = `history-${qr}`;
             historyRow.className = 'history-row';
             historyRow.innerHTML = `
                 <td colspan="5">
                     <div class="history-container">
-                        <h4 style="margin-top:0; color:#666;">Full Audit Trail:</h4>
+                        <h4 style="margin-top:0; color:#666;">Audit Trail:</h4>
                         <table style="background:white; border-radius:5px;">
                             ${history.map(h => `
                                 <tr>
                                     <td style="border:none; color:#777;">${new Date(h.created_at).toLocaleTimeString()}</td>
                                     <td style="border:none;"><strong>${h.status}</strong> at ${h.department}</td>
-                                    <td style="border:none;">By: ${h.status === 'Picked Up' ? h.picked_up_by : h.received_by}</td>
+                                    <td style="border:none;">By: ${h.status === 'Picked Up' ? (h.picked_up_by || '---') : (h.received_by || '---')}</td>
                                 </tr>
                             `).join('')}
                         </table>
@@ -174,24 +186,56 @@
         return 'status-not-signed';
     }
 
+    // THE ALERT LOGIC (Plays sound 3 times)
+    function triggerAlert(msg, isReminder = false) {
+        const toast = document.getElementById('notification-toast');
+        const sound = document.getElementById('notif-sound');
+        
+        document.getElementById('toast-msg').innerText = (isReminder ? "⚠️ REMINDER: " : "") + msg;
+        toast.style.display = 'block';
+        toast.style.borderLeft = isReminder ? "8px solid #f39c12" : "8px solid #28a745";
+
+        if (audioEnabled) {
+            let count = 0;
+            const alertLoop = setInterval(() => {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log("Audio play blocked"));
+                count++;
+                if (count >= 3) clearInterval(alertLoop);
+            }, 800);
+        }
+        setTimeout(() => { toast.style.display = 'none'; }, 10000);
+    }
+
+    // 5-MINUTE REMINDER CHECK
+    async function runReminderCheck() {
+        console.log("⏰ Running Reminder Check...");
+        const timeLimit = new Date(Date.now() - 120 * 60 * 1000).toISOString();
+        
+        const { data: recentItems } = await _supabase
+            .from('document_tracking_events')
+            .select('parent_qr_code, status')
+            .or('status.eq.Signed,status.eq.Not Signed')
+            .gt('created_at', timeLimit);
+
+        if (recentItems && recentItems.length > 0) {
+            const uniqueDocs = [...new Set(recentItems.map(item => item.parent_qr_code))];
+            triggerAlert(`${uniqueDocs.length} document(s) recently updated or still pending.`, true);
+        }
+    }
+
     function startListener() {
         _supabase.channel('dashboard-results').on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'document_notifications' }, 
             (payload) => {
-                showToast(payload.new.message);
+                triggerAlert(payload.new.message);
                 loadDashboard();
             }
         ).subscribe();
     }
 
-    function showToast(msg) {
-        const toast = document.getElementById('notification-toast');
-        document.getElementById('toast-msg').innerText = msg;
-        toast.style.display = 'block';
-        document.getElementById('notif-sound').play().catch(() => {});
-        setTimeout(() => { toast.style.display = 'none'; }, 8000);
-    }
-
+    setInterval(runReminderCheck, 5 * 60 * 1000);
+    
     loadDashboard();
     startListener();
 </script>
