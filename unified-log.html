@@ -15,7 +15,6 @@
         .section-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .form-group { display: flex; flex-direction: column; margin-bottom: 10px; }
-        .full-width { grid-column: span 2; }
         
         label { font-size: 0.7rem; font-weight: bold; color: #1a73ba; margin-bottom: 3px; text-transform: uppercase; }
         input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
@@ -24,7 +23,6 @@
         .btn-primary { background: #1a73ba; color: white; width: 100%; }
         .btn-success { background: #28a745; color: white; width: 100%; margin-top: 10px; }
         
-        /* REPRINT SEARCH BOX */
         .reprint-box { border-top: 3px solid #666; margin-top: 10px; }
         .search-row { display: flex; gap: 10px; margin-top: 10px; }
         .search-row input { flex-grow: 1; }
@@ -32,41 +30,52 @@
         /* --- PRINTABLE SLIP --- */
         #printable-slip {
             background: white;
-            padding: 30px;
+            padding: 20px 40px;
             display: none; 
             flex-direction: column;
             width: 100%;
-            border: 1px dashed #ccc;
+            /* Border Top preset color */
+            border-top: 4px solid #33c933;
+            /* Border Bottom preset color */
+            border-bottom: 4px solid #33c933;
         }
 
         .slip-header { 
             width: 100%; 
             display: flex; 
             justify-content: center;
-            border-bottom: 2px solid #000;
             padding-bottom: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
-        .slip-logo { width: 300px; height: auto; object-fit: contain; }
+        .slip-logo { width: 220px; height: auto; object-fit: contain; }
         
-        .slip-body { display: flex; justify-content: space-between; align-items: flex-start; }
+        .slip-body { display: flex; justify-content: space-between; align-items: center; }
         .details-area { flex: 1; }
-        .details-area h2 { margin: 0 0 15px 0; font-size: 18pt; color: #1a73ba; text-transform: uppercase; }
+        .details-area h2 { margin: 0 0 10px 0; font-size: 16pt; color: #1a73ba; text-transform: uppercase; }
         
-        .info-row { font-size: 11pt; margin-bottom: 8px; }
-        .info-row strong { width: 100px; display: inline-block; color: #444; }
+        .info-row { font-size: 10pt; margin-bottom: 5px; }
+        .info-row strong { width: 90px; display: inline-block; color: #444; }
 
         .qr-side { text-align: center; padding-left: 20px; }
-        .hex-display { font-family: monospace; font-size: 20pt; font-weight: bold; border: 2px solid #000; padding: 5px 10px; display: block; margin-top: 10px; }
+        .hex-display { font-family: monospace; font-size: 18pt; font-weight: bold; border: 2px solid #000; padding: 5px 10px; display: block; margin-top: 8px; }
+
+        .slogan {
+            text-align: center;
+            font-weight: bold;
+            font-style: italic;
+            font-size: 12pt;
+            color: #33c933;
+            margin-top: 15px;
+            letter-spacing: 1px;
+        }
 
         @media print {
             body { background: white; padding: 0; }
-            .section-box, h2, button { display: none !important; }
+            .section-box, h2, button, .reprint-box { display: none !important; }
             #printable-slip { 
                 display: flex !important; 
                 position: absolute; top: 0; left: 0; 
-                width: 210mm; height: 120mm; /* Reduced height */
-                border: none;
+                width: 210mm; height: 110mm; 
             }
             @page { size: A4 portrait; margin: 0; }
         }
@@ -80,24 +89,24 @@
             <div class="form-grid">
                 <div class="form-group"><label>Category</label><input list="cat-list" id="category"><datalist id="cat-list"></datalist></div>
                 <div class="form-group"><label>Project Name</label><input type="text" id="project_name"></div>
-                <div class="form-group"><label>Route (Optional)</label><input type="text" id="departments"></div>
+                <div class="form-group"><label>Route</label><input type="text" id="departments" placeholder="Optional"></div>
                 <div class="form-group"><label>Staff</label><input type="text" id="route_by"></div>
             </div>
             <button class="btn-primary" id="proc-btn" onclick="processAll()">SAVE & GENERATE</button>
         </div>
 
         <div class="section-box reprint-box">
-            <label>Reprint Slip (Retractable Search)</label>
+            <label>Reprint Slip</label>
             <div class="search-row">
-                <input type="text" id="reprint-id" placeholder="Enter 5-digit Hex ID (e.g. A1B2C)">
-                <button onclick="reprintSlip()" style="background:#666; color:white; width: 120px;">FETCH</button>
+                <input type="text" id="reprint-id" placeholder="Enter Hex ID">
+                <button onclick="reprintSlip()" style="background:#666; color:white; width: 100px;">FETCH</button>
             </div>
             <button class="btn-success" id="print-btn" onclick="window.print()" style="display:none;">🖨️ PRINT SLIP</button>
         </div>
 
         <div id="printable-slip">
             <div class="slip-header">
-                <img src="https://i.imgur.com/VbZKWAf.png" class="slip-logo">
+                <img src="https://i.imgur.com/5SCk9eU.jpeg" class="slip-logo">
             </div>
 
             <div class="slip-body">
@@ -113,6 +122,8 @@
                     <div id="display-hex" class="hex-display">-----</div>
                 </div>
             </div>
+
+            <div class="slogan">Dedicated To Life</div>
         </div>
     </div>
 
@@ -155,16 +166,11 @@
 
         async function reprintSlip() {
             const searchId = document.getElementById('reprint-id').value.toUpperCase().trim();
-            if(!searchId) return alert("Enter ID");
-
-            const { data, error } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', searchId).single();
-            
+            if(!searchId) return;
+            const { data } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', searchId).single();
             if (data) {
                 renderSlip(data.category, data.project_name, data.qr_code, data.route_by, data.qr_link);
                 document.getElementById('print-btn').style.display = 'block';
-                alert("Document Found: " + data.project_name);
-            } else {
-                alert("ID not found in system.");
             }
         }
 
@@ -177,7 +183,7 @@
 
             const qrContainer = document.getElementById('qr-target');
             qrContainer.innerHTML = "";
-            new QRCode(qrContainer, { text: link, width: 120, height: 120 });
+            new QRCode(qrContainer, { text: link, width: 100, height: 100 });
             document.getElementById('printable-slip').style.display = 'flex';
         }
 
