@@ -15,6 +15,7 @@
         .section-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .form-group { display: flex; flex-direction: column; margin-bottom: 10px; }
+        .full-width { grid-column: span 2; }
         
         label { font-size: 0.7rem; font-weight: bold; color: #1a73ba; margin-bottom: 3px; text-transform: uppercase; }
         input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
@@ -29,109 +30,53 @@
 
         /* --- UIverse Animated Fetch Button --- */
         .uiverse-btn {
-            position: relative;
-            width: 120px;
-            height: 40px;
-            background-color: #000;
-            display: flex;
-            align-items: center;
-            color: white;
-            flex-direction: column;
-            justify-content: center;
-            border: none;
-            padding: 12px;
-            gap: 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            z-index: 1;
+            position: relative; width: 120px; height: 40px; background-color: #000;
+            display: flex; align-items: center; color: white; flex-direction: column;
+            justify-content: center; border: none; padding: 12px; gap: 12px;
+            border-radius: 8px; cursor: pointer; z-index: 1;
         }
-
         .uiverse-btn::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            left: -4px;
-            top: -1px;
-            margin: auto;
-            width: 128px;
-            height: 48px;
-            border-radius: 10px;
+            content: ''; position: absolute; inset: 0; left: -4px; top: -1px; margin: auto;
+            width: 128px; height: 48px; border-radius: 10px;
             background: linear-gradient(-45deg, #e81cff 0%, #40c9ff 100% );
-            z-index: -10;
-            pointer-events: none;
-            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: -10; pointer-events: none; transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
         .uiverse-btn::after {
-            content: "";
-            z-index: -1;
-            position: absolute;
-            inset: 0;
+            content: ""; z-index: -1; position: absolute; inset: 0;
             background: linear-gradient(-45deg, #fc00ff 0%, #00dbde 100% );
-            transform: translate3d(0, 0, 0) scale(0.95);
-            filter: blur(20px);
+            transform: translate3d(0, 0, 0) scale(0.95); filter: blur(20px);
         }
-
         .uiverse-btn:hover::after { filter: blur(30px); }
         .uiverse-btn:hover::before { transform: rotate(-180deg); }
         .uiverse-btn:active::before { scale: 0.7; }
 
         /* --- PRINTABLE SLIP --- */
-        #printable-slip {
-            background: white;
-            padding: 0 40px;
-            display: none; 
-            flex-direction: column;
-            width: 100%;
-        }
-
+        #printable-slip { background: white; padding: 0 40px; display: none; flex-direction: column; width: 100%; }
         .slip-header { 
-            width: 100%; 
-            display: flex; 
-            justify-content: center;
-            padding: 15px 0;
-            border-bottom: 4px solid #299c29; 
-            margin-bottom: 20px;
+            width: 100%; display: flex; justify-content: center; padding: 15px 0;
+            border-bottom: 4px solid #299c29; margin-bottom: 15px;
         }
-        .slip-logo { width: 350px; height: auto; object-fit: contain; }
-        
-        .slip-body { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+        .slip-logo { width: 320px; height: auto; object-fit: contain; }
+        .slip-body { display: flex; justify-content: space-between; align-items: flex-start; padding: 0 10px; }
         .details-area { flex: 1; }
+        #slip-proj { margin: 0 0 8px 0; font-size: 18pt; color: #1a73ba; text-transform: uppercase; }
         
-        #slip-proj { 
-            margin: 0 0 10px 0; 
-            font-size: 18pt; 
-            color: #1a73ba; 
-            text-transform: uppercase; 
-            display: block !important; 
-        }
-        
-        .info-row { font-size: 11pt; margin-bottom: 6px; }
-        .info-row strong { width: 140px; display: inline-block; color: #444; }
+        .info-row { font-size: 10pt; margin-bottom: 4px; }
+        .info-row strong { width: 130px; display: inline-block; color: #444; }
 
         .qr-side { text-align: center; padding-left: 20px; }
         .hex-display { font-family: monospace; font-size: 18pt; font-weight: bold; border: 2px solid #000; padding: 5px 10px; display: block; margin-top: 8px; }
 
         .slogan {
-            text-align: center;
-            font-weight: bold;
-            font-style: italic;
-            font-size: 13pt;
-            color: #299c29;
-            margin-top: 20px;
-            padding-bottom: 15px;
-            border-bottom: 4px solid #299c29; 
-            letter-spacing: 1px;
+            text-align: center; font-weight: bold; font-style: italic; font-size: 13pt;
+            color: #299c29; margin-top: 15px; padding-bottom: 15px;
+            border-bottom: 4px solid #299c29; letter-spacing: 1px;
         }
 
         @media print {
             body { background: white; padding: 0; }
             .section-box, h2:not(#slip-proj), button, .reprint-box { display: none !important; }
-            #printable-slip { 
-                display: flex !important; 
-                position: absolute; top: 0; left: 0; 
-                width: 210mm; height: auto; 
-            }
+            #printable-slip { display: flex !important; position: absolute; top: 0; left: 0; width: 210mm; }
             @page { size: A4 portrait; margin: 0; }
         }
     </style>
@@ -146,6 +91,7 @@
                 <div class="form-group"><label>Project Name</label><input type="text" id="project_name"></div>
                 <div class="form-group"><label>Department Origin</label><input type="text" id="origin_dept"></div>
                 <div class="form-group"><label>Staff Name</label><input type="text" id="staff_name"></div>
+                <div class="form-group full-width"><label>Route / Target Departments</label><input type="text" id="departments" placeholder="e.g. Finance, Billing, HR (comma separated)"></div>
             </div>
             <button class="btn-primary" id="proc-btn" onclick="processAll()">SAVE & GENERATE</button>
         </div>
@@ -160,25 +106,21 @@
         </div>
 
         <div id="printable-slip">
-            <div class="slip-header">
-                <img src="https://i.imgur.com/5SCk9eU.jpeg" class="slip-logo">
-            </div>
-
+            <div class="slip-header"><img src="https://i.imgur.com/5SCk9eU.jpeg" class="slip-logo"></div>
             <div class="slip-body">
                 <div class="details-area">
                     <h2 id="slip-proj">---</h2>
                     <div class="info-row"><strong>CATEGORY:</strong> <span id="slip-cat">---</span></div>
                     <div class="info-row"><strong>ORIGIN DEPT:</strong> <span id="slip-origin">---</span></div>
                     <div class="info-row"><strong>STAFF:</strong> <span id="slip-staff">---</span></div>
+                    <div class="info-row"><strong>TARGET ROUTE:</strong> <span id="slip-depts" style="color:#1a73ba; font-weight:bold;">---</span></div>
                     <div class="info-row"><strong>DATE:</strong> <span id="slip-date">---</span></div>
                 </div>
-
                 <div class="qr-side">
                     <div id="qr-target"></div>
                     <div id="display-hex" class="hex-display">-----</div>
                 </div>
             </div>
-
             <div class="slogan">Dedicated To Life</div>
         </div>
     </div>
@@ -200,32 +142,25 @@
             const proj = document.getElementById('project_name').value;
             const origin = document.getElementById('origin_dept').value;
             const staff = document.getElementById('staff_name').value;
+            const depts = document.getElementById('departments').value;
 
             if(!cat || !proj) return alert("Fill Name and Category");
-
             btn.disabled = true;
+
             let hex = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
             const fullLink = `https://vallealfrie-png.github.io/Document-Tracker/track.html?id=${hex}`;
 
             const { error } = await _supabase.from('combined_routing_logs').insert([{
-                category: cat, 
-                project_name: proj, 
-                qr_code: hex, 
-                qr_link: fullLink, 
-                origin_dept: origin, // Updated field name
-                staff_name: staff,   // Assuming you have this column or it saves to a 'staff' column
-                status: 'Active'
+                category: cat, project_name: proj, qr_code: hex, qr_link: fullLink, 
+                origin_dept: origin, staff_name: staff, departments: depts.split(','), status: 'Active'
             }]);
 
             if(!error) {
-                renderSlip(cat, proj, hex, origin, staff, fullLink);
+                renderSlip(cat, proj, hex, origin, staff, depts, fullLink);
                 document.getElementById('print-btn').style.display = 'block';
                 btn.innerText = "SAVED";
                 loadCategories();
-            } else { 
-                alert("Error: " + error.message);
-                btn.disabled = false; 
-            }
+            } else { alert("Error: " + error.message); btn.disabled = false; }
         }
 
         async function reprintSlip() {
@@ -233,19 +168,18 @@
             if(!searchId) return;
             const { data } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', searchId).single();
             if (data) {
-                renderSlip(data.category, data.project_name, data.qr_code, data.origin_dept, data.staff_name, data.qr_link);
+                renderSlip(data.category, data.project_name, data.qr_code, data.origin_dept, data.staff_name, data.departments.join(', '), data.qr_link);
                 document.getElementById('print-btn').style.display = 'block';
-            } else {
-                alert("ID not found.");
-            }
+            } else { alert("ID not found."); }
         }
 
-        function renderSlip(cat, proj, hex, origin, staff, link) {
+        function renderSlip(cat, proj, hex, origin, staff, depts, link) {
             document.getElementById('slip-cat').innerText = cat;
             document.getElementById('slip-proj').innerText = proj;
             document.getElementById('display-hex').innerText = hex;
             document.getElementById('slip-origin').innerText = origin || "N/A";
             document.getElementById('slip-staff').innerText = staff || "N/A";
+            document.getElementById('slip-depts').innerText = depts || "N/A";
             document.getElementById('slip-date').innerText = new Date().toLocaleDateString();
 
             const qrContainer = document.getElementById('qr-target');
