@@ -9,91 +9,141 @@
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
         
-        .main-layout { display: flex; gap: 20px; max-width: 1200px; margin: auto; }
-        
-        /* Left Side: Form */
-        .form-container { flex: 1; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        /* Dashboard Layout */
+        .main-layout { max-width: 1000px; margin: auto; display: flex; flex-direction: column; gap: 20px; }
+        .form-container { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .form-group { display: flex; flex-direction: column; margin-bottom: 12px; }
+        .full-width { grid-column: span 2; }
+        
         label { font-size: 0.75rem; font-weight: bold; color: #1a73ba; margin-bottom: 4px; text-transform: uppercase; }
         input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
         .hint { font-size: 0.7rem; color: #888; margin-top: 2px; }
         
-        button { width: 100%; padding: 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .btn-process { background: #1a73ba; color: white; }
-        .btn-print { background: #28a745; color: white; display: none; }
+        button { padding: 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 1rem; }
+        .btn-process { background: #1a73ba; color: white; width: 100%; }
+        .btn-print { background: #28a745; color: white; width: 100%; display: none; margin-top: 10px; }
 
-        /* Right Side: Slip Preview */
-        .preview-container { width: 350px; }
-        #printable-slip { 
-            background: white; 
-            padding: 20px; 
-            border: 2px solid #1a73ba; 
-            display: none; 
-            flex-direction: column; 
-            align-items: center; 
-            text-align: center;
+        /* --- PRINTABLE SLIP (A4 HALF PAGE) --- */
+        #printable-slip {
+            background: white;
+            padding: 30px;
+            border: 2px solid #000;
+            display: none; /* Hidden on screen until generated */
+            flex-direction: column;
+            width: 100%;
+            margin-top: 20px;
         }
-        .slip-logo { width: 150px; margin-bottom: 10px; }
-        .qr-box { padding: 10px; background: white; border: 1px solid #eee; margin: 10px 0; }
-        .hex-code { font-family: monospace; font-size: 16pt; font-weight: bold; letter-spacing: 4px; background: #f8f9fa; padding: 5px 15px; border: 1px dashed #1a73ba; }
-        .target-list { font-size: 9pt; color: #444; margin-top: 10px; font-style: italic; }
 
+        .slip-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+        .slip-logo { width: 120px; }
+        .slip-title { text-align: center; flex-grow: 1; }
+        .slip-title h2 { margin: 0; font-size: 1.6rem; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .info-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 15px; }
+        .info-item { font-size: 10pt; line-height: 1.6; }
+        .hex-display { font-family: monospace; font-size: 18pt; font-weight: bold; border: 2px dashed #000; padding: 5px 15px; display: inline-block; margin-top: 5px; }
+
+        .routing-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .routing-table th, .routing-table td { border: 1px solid #000; padding: 8px; text-align: left; font-size: 9pt; }
+        .routing-table th { background: #f0f0f0; text-transform: uppercase; }
+
+        /* Print Media Logic */
         @media print {
-            .form-container, h2, .btn-print { display: none; }
             body { background: white; padding: 0; }
-            .main-layout { display: block; }
-            #printable-slip { display: flex !important; border: none; width: 3.5in; margin: auto; }
-            @page { size: portrait; margin: 0.2in; }
+            .form-container, h2, .btn-process, .btn-print { display: none !important; }
+            #printable-slip { 
+                display: flex !important; 
+                border: 1px solid #000; 
+                position: absolute; top: 0; left: 0; 
+                width: 210mm; height: 148mm; /* Half A4 */
+            }
+            @page { size: A4 portrait; margin: 0; }
         }
     </style>
 </head>
 <body>
 
-    <h2 style="text-align:center; color: #1a73ba;">Unified Document Routing & Log</h2>
+    <h2 style="text-align:center; color: #1a73ba;">Unified Document Routing System</h2>
 
     <div class="main-layout">
         <div class="form-container">
-            <div class="form-group">
-                <label>Category</label>
-                <input list="cat-list" id="category" placeholder="Select or Type">
-                <datalist id="cat-list"></datalist>
-            </div>
-            <div class="form-group">
-                <label>Project / Document Name</label>
-                <input type="text" id="project_name">
-            </div>
-            <div class="form-group">
-                <label>Target Departments</label>
-                <input type="text" id="departments" placeholder="Accounting, HR, Admin">
-                <span class="hint">Separate with commas (e.g. Dept1, Dept2)</span>
-            </div>
-            <div class="form-group">
-                <label>Routed By</label>
-                <input type="text" id="route_by" placeholder="Your Name">
-            </div>
-            <div class="form-group">
-                <label>Messenger / Take-out By</label>
-                <input type="text" id="takeout_by">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Category</label>
+                    <input list="cat-list" id="category" placeholder="e.g. Purchase Request">
+                    <datalist id="cat-list">
+                        <option value="Medical Report">
+                        <option value="Purchase Request">
+                        <option value="HR Document">
+                        <option value="Marketing Material">
+                    </datalist>
+                </div>
+                <div class="form-group">
+                    <label>Project / Document Name</label>
+                    <input type="text" id="project_name">
+                </div>
+                <div class="form-group full-width">
+                    <label>Target Departments (Route Plan)</label>
+                    <input type="text" id="departments" placeholder="Accounting, HR, Admin">
+                    <span class="hint">Separate with commas (➔ separator will be added automatically on slip)</span>
+                </div>
+                <div class="form-group">
+                    <label>Routed By</label>
+                    <input type="text" id="route_by" placeholder="Originating Staff">
+                </div>
+                <div class="form-group">
+                    <label>Messenger / Take-out By</label>
+                    <input type="text" id="takeout_by">
+                </div>
             </div>
             
-            <button class="btn-process" id="proc-btn" onclick="processAll()">PROCESS & GENERATE QR</button>
-            <button class="btn-print" id="print-btn" onclick="window.print()">PRINT ROUTING SLIP</button>
+            <button class="btn-process" id="proc-btn" onclick="processAll()">GENERATE ROUTING SLIP</button>
+            <button class="btn-print" id="print-btn" onclick="window.print()">🖨️ PRINT NOW (A4 Half-Page)</button>
         </div>
 
-        <div class="preview-container">
-            <div id="printable-slip">
+        <div id="printable-slip">
+            <div class="slip-header">
                 <img src="https://i.imgur.com/VbZKWAf.png" class="slip-logo">
-                <div style="font-weight: bold; font-size: 12pt; margin-bottom: 10px;">ROUTING SLIP</div>
-                
-                <div id="qr-target" class="qr-box"></div>
-                <div id="display-hex" class="hex-code">-----</div>
-                
-                <div style="margin-top: 15px; width: 100%; text-align: left; font-size: 9pt;">
-                    <strong>Project:</strong> <span id="slip-proj">---</span><br>
-                    <strong>Category:</strong> <span id="slip-cat">---</span><br>
-                    <strong>Route:</strong> <span id="slip-route">---</span>
+                <div class="slip-title">
+                    <h2>Document Routing Slip</h2>
+                    <div style="font-size: 9pt;">Perpetual Help Medical Center - Las Piñas</div>
                 </div>
-                <div id="slip-depts" class="target-list"></div>
+                <div id="qr-target"></div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <strong>PROJECT:</strong> <span id="slip-proj" style="font-size: 12pt; font-weight: bold;">---</span><br>
+                    <strong>CATEGORY:</strong> <span id="slip-cat">---</span><br>
+                    <strong>PREPARED BY:</strong> <span id="slip-route">---</span><br>
+                    <strong>DATE:</strong> <span id="slip-date">---</span>
+                </div>
+                <div style="text-align: right;">
+                    <strong>TRACKING ID</strong><br>
+                    <div id="display-hex" class="hex-display">-----</div>
+                </div>
+            </div>
+
+            <table class="routing-table">
+                <thead>
+                    <tr>
+                        <th width="15%">Date/Time</th>
+                        <th width="30%">Station / Department</th>
+                        <th width="25%">Received By</th>
+                        <th width="30%">Action / Remarks</th>
+                    </tr>
+                </thead>
+                <tbody id="routing-rows">
+                    <tr><td height="35"></td><td></td><td></td><td></td></tr>
+                    <tr><td height="35"></td><td></td><td></td><td></td></tr>
+                    <tr><td height="35"></td><td></td><td></td><td></td></tr>
+                    <tr><td height="35"></td><td></td><td></td><td></td></tr>
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 10px; font-size: 8pt; font-style: italic; color: #444;">
+                <strong>Destinations:</strong> <span id="slip-depts">---</span>
             </div>
         </div>
     </div>
@@ -109,12 +159,11 @@
             const routed = document.getElementById('route_by').value;
             const takeout = document.getElementById('takeout_by').value;
 
-            if(!cat || !proj || !deptInput) { alert("Fill in Category, Project, and Departments!"); return; }
+            if(!cat || !proj || !deptInput) { alert("Please complete the required fields!"); return; }
 
             btn.disabled = true;
-            btn.innerText = "GENERATING UNIQUE ID...";
+            btn.innerText = "PREPARING LOGS...";
 
-            // 1. Generate & Check Hex Uniqueness
             let isUnique = false;
             let hex = "";
             while(!isUnique) {
@@ -123,16 +172,14 @@
                 if(data.length === 0) isUnique = true;
             }
 
-            // 2. Prepare the Links and Data
             const deptArray = deptInput.split(',').map(d => d.trim()).filter(d => d !== "");
             const fullLink = `https://vallealfrie-png.github.io/Document-Tracker/track.html?id=${hex}`;
 
-            // 3. Save to Supabase (including qr_link)
             const { error } = await _supabase.from('combined_routing_logs').insert([{
                 category: cat,
                 project_name: proj,
                 qr_code: hex,
-                qr_link: fullLink, // Saving the full scan link here
+                qr_link: fullLink,
                 departments: deptArray,
                 route_by: routed,
                 takeout_by: takeout,
@@ -142,11 +189,10 @@
             if(error) {
                 alert("Error: " + error.message);
                 btn.disabled = false;
-                btn.innerText = "PROCESS & GENERATE QR";
             } else {
                 renderSlip(cat, proj, hex, deptArray, routed, fullLink);
                 document.getElementById('print-btn').style.display = 'block';
-                btn.innerText = "LOGGED SUCCESSFULLY";
+                btn.innerText = "ROUTING GENERATED ✅";
             }
         }
 
@@ -155,17 +201,15 @@
             document.getElementById('slip-proj').innerText = proj;
             document.getElementById('display-hex').innerText = hex;
             document.getElementById('slip-route').innerText = routed;
-            document.getElementById('slip-depts').innerText = "Destinations: " + depts.join(' ➔ ');
+            document.getElementById('slip-date').innerText = new Date().toLocaleDateString();
+            document.getElementById('slip-depts').innerText = depts.join(' ➔ ');
 
             const qrContainer = document.getElementById('qr-target');
             qrContainer.innerHTML = "";
             new QRCode(qrContainer, {
-                text: link, // The QR now encodes the exact tracking URL
-                width: 140, 
-                height: 140,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
+                text: link,
+                width: 80, 
+                height: 80
             });
             document.getElementById('printable-slip').style.display = 'flex';
         }
