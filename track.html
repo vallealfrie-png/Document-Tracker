@@ -54,13 +54,13 @@
         <label>Your Name (Receiver)</label>
         <input type="text" id="rec_name" placeholder="Enter your full name">
         <label>Your Department</label>
-        <input type="text" id="rec_dept" list="dept-list" placeholder="Select or type department">
+        <input type="text" id="rec_dept" list="dept-options" placeholder="e.g. Finance, HR">
         <button class="btn btn-primary" id="btn-rec" onclick="handleAction('Received')">LOG RECEIPT</button>
     </div>
 
     <div id="view-status" class="interface-content">
         <label>Current Department</label>
-        <input type="text" id="stat_dept" list="dept-list" placeholder="Where is the document now?">
+        <input type="text" id="stat_dept" list="dept-options" placeholder="Where is the document now?">
         <label>Set Signature Status</label>
         <select id="stat_val">
             <option value="Not Signed">❌ Not Signed</option>
@@ -72,18 +72,13 @@
     <div id="view-pickup" class="interface-content">
         <label>Messenger Name (Picked up by)</label>
         <input type="text" id="pick_name" placeholder="Who is taking the document?">
-        
-        <label>Releasing From (Dept)</label>
-        <input type="text" id="pick_dept_from" list="dept-list" placeholder="Dept releasing it">
-        
-        <label>Destination Department</label>
-        <input type="text" id="pick_dept_to" list="dept-list" placeholder="Where is it going?">
-        
+        <label>Releasing Department</label>
+        <input type="text" id="pick_dept" list="dept-options" placeholder="Department releasing it">
         <button class="btn btn-success" id="btn-pick" onclick="handleAction('Picked Up')">LOG PICK-UP</button>
     </div>
 </div>
 
-<datalist id="dept-list"></datalist>
+<datalist id="dept-options"></datalist>
 
 <script>
     const _supabase = supabase.createClient('https://tywhjkofayqhmwbpzvlg.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5d2hqa29mYXlxaG13YnB6dmxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzA2ODYsImV4cCI6MjA5MTIwNjY4Nn0.F-mFKAhn5kRtAU1XOM5jMiT4-zL3P6YJ7Rtj9VGatH4');
@@ -103,24 +98,27 @@
             return;
         }
         
-        // Load Project Details
+        // 1. Fetch Project Details
         const { data } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', qrID).single();
         if (data) {
             document.getElementById('display-name').innerText = data.project_name;
             document.getElementById('display-id').innerText = "ID: " + data.qr_code;
         }
 
-        // Load Departments for the dropdown list
+        // 2. Initial Dropdown Load
         loadDeptDropdown();
     }
 
+    // Fetches all unique departments from tracking events
     async function loadDeptDropdown() {
-        const { data } = await _supabase.from('document_tracking_events').select('department');
+        const { data, error } = await _supabase
+            .from('document_tracking_events')
+            .select('department');
+        
         if (data) {
-            // Filter unique names and remove nulls
-            const uniqueDepts = [...new Set(data.map(item => item.department))].filter(Boolean);
-            const list = document.getElementById('dept-list');
-            list.innerHTML = uniqueDepts.map(d => `<option value="${d}">`).join('');
+            const uniqueDepts = [...new Set(data.map(item => item.department))].filter(Boolean).sort();
+            const datalist = document.getElementById('dept-options');
+            datalist.innerHTML = uniqueDepts.map(dept => `<option value="${dept}">`).join('');
         }
     }
 
@@ -156,16 +154,14 @@
         } 
         else if (type === 'Picked Up') {
             const messenger = document.getElementById('pick_name').value;
-            const deptFrom = document.getElementById('pick_dept_from').value;
-            const deptTo = document.getElementById('pick_dept_to').value; // Destination
-
-            if (!messenger || !deptFrom || !deptTo) return alert("Please fill in Messenger, Releasing Dept, and Destination");
+            const dept = document.getElementById('pick_dept').value;
+            if (!messenger || !dept) return alert("Please enter Messenger Name and Dept");
 
             btn = document.getElementById('btn-pick');
             entryData.picked_up_by = messenger; 
-            entryData.department = deptTo; // We save the DESTINATION as the current department column
+            entryData.department = dept;
             entryData.status = 'Picked Up';
-            msg = `🚚 Document ${qrID} picked up by ${messenger} from ${deptFrom} heading to ${deptTo}`;
+            msg = `🚚 Document ${qrID} picked up by ${messenger} from ${dept}`;
         }
 
         btn.disabled = true;
@@ -180,7 +176,9 @@
             }]);
             alert(type + " logged successfully!");
             btn.innerText = "SUCCESS";
-            loadDeptDropdown(); // Refresh the list for the next scan
+            
+            // Refresh dropdown in case a brand new department was typed
+            loadDeptDropdown();
         } else {
             console.error(logErr);
             alert("Error: " + logErr.message);
