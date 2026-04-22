@@ -49,13 +49,12 @@
         .uiverse-btn:hover::before { transform: rotate(-180deg); }
         .uiverse-btn:active::before { scale: 0.7; }
 
-        /* PRINTABLE SLIP - Adjusted for Larger Graphics */
+        /* PRINTABLE SLIP */
         #printable-slip { background: white; padding: 0 40px; display: none; flex-direction: column; width: 100%; }
         .slip-header { 
             width: 100%; display: flex; justify-content: center; padding: 20px 0;
             border-bottom: 4px solid #299c29; margin-bottom: 20px;
         }
-        /* Increased Logo Size */
         .slip-logo { width: 620px; height: auto; object-fit: contain; }
         
         .slip-body { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
@@ -66,6 +65,13 @@
         .info-row strong { width: 140px; display: inline-block; color: #444; }
 
         .qr-side { text-align: center; padding-left: 30px; }
+        .scan-instruction { 
+            font-size: 11pt; 
+            font-weight: bold; 
+            color: #1a73ba; 
+            margin-bottom: 8px; 
+            text-transform: uppercase;
+        }
         .hex-display { font-family: monospace; font-size: 22pt; font-weight: bold; border: 2px solid #000; padding: 5px 15px; display: block; margin-top: 10px; }
 
         .slogan {
@@ -117,6 +123,7 @@
                     <div class="info-row"><strong>DATE:</strong> <span id="slip-date">---</span></div>
                 </div>
                 <div class="qr-side">
+                    <div class="scan-instruction">Scan Me to Update Us ↓</div>
                     <div id="qr-target"></div>
                     <div id="display-hex" class="hex-display">-----</div>
                 </div>
@@ -183,7 +190,6 @@
 
             const qrContainer = document.getElementById('qr-target');
             qrContainer.innerHTML = "";
-            // Increased QR Code Size to 150px
             new QRCode(qrContainer, { text: link, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.H });
             document.getElementById('printable-slip').style.display = 'flex';
         }
