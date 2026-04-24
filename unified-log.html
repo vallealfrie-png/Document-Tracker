@@ -133,7 +133,11 @@
     </div>
 
     <script>
-        const _supabase = supabase.createClient('https://onozvyuowebbwuvcqlzt.supabase.co/rest/v1/', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0');
+        // REMOVED /rest/v1/ FROM THE URL TO FIX THE "INVALID PATH" ERROR
+        const _supabase = supabase.createClient(
+            'https://onozvyuowebbwuvcqlzt.supabase.co', 
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0'
+        );
 
         async function loadCategories() {
             const { data } = await _supabase.from('combined_routing_logs').select('category');
@@ -167,17 +171,23 @@
                 document.getElementById('print-btn').style.display = 'block';
                 btn.innerText = "SAVED";
                 loadCategories();
-            } else { alert("Error: " + error.message); btn.disabled = false; }
+            } else { 
+                alert("Error: " + error.message); 
+                btn.disabled = false; 
+                btn.innerText = "SAVE & GENERATE";
+            }
         }
 
         async function reprintSlip() {
             const searchId = document.getElementById('reprint-id').value.toUpperCase().trim();
             if(!searchId) return;
-            const { data } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', searchId).single();
+            const { data, error } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', searchId).single();
             if (data) {
                 renderSlip(data.category, data.project_name, data.qr_code, data.origin_dept, data.staff_name, data.qr_link);
                 document.getElementById('print-btn').style.display = 'block';
-            } else { alert("ID not found."); }
+            } else { 
+                alert(error ? error.message : "ID not found."); 
+            }
         }
 
         function renderSlip(cat, proj, hex, origin, staff, link) {
