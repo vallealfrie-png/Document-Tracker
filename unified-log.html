@@ -27,7 +27,6 @@
         .search-row { display: flex; gap: 20px; margin-top: 15px; align-items: center; }
         .search-row input { flex-grow: 1; height: 40px; }
 
-        /* UIverse Animated Fetch Button */
         .uiverse-btn {
             position: relative; width: 120px; height: 40px; background-color: #000;
             display: flex; align-items: center; color: white; flex-direction: column;
@@ -49,7 +48,7 @@
         .uiverse-btn:hover::before { transform: rotate(-180deg); }
         .uiverse-btn:active::before { scale: 0.7; }
 
-        /* PRINTABLE SLIP */
+        /* PRINTABLE SLIP Updates */
         #printable-slip { background: white; padding: 0 40px; display: none; flex-direction: column; width: 100%; }
         .slip-header { 
             width: 100%; display: flex; justify-content: center; padding: 20px 0;
@@ -57,12 +56,22 @@
         }
         .slip-logo { width: 620px; height: auto; object-fit: contain; }
         
-        .slip-body { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+        .slip-body { display: flex; justify-content: space-between; align-items: flex-start; padding: 0 10px; }
         .details-area { flex: 1; }
         #slip-proj { margin: 0 0 12px 0; font-size: 20pt; color: #1a73ba; text-transform: uppercase; }
         
         .info-row { font-size: 12pt; margin-bottom: 6px; }
         .info-row strong { width: 140px; display: inline-block; color: #444; }
+
+        /* Routing Plan Display */
+        .routing-plan-box {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px dashed #ccc;
+            background: #fafafa;
+        }
+        .routing-title { font-size: 10pt; font-weight: bold; color: #1a73ba; margin-bottom: 5px; }
+        #slip-routing { font-size: 11pt; color: #333; line-height: 1.4; }
 
         .qr-side { text-align: center; padding-left: 30px; }
         .scan-instruction { 
@@ -98,7 +107,10 @@
                 <div class="form-group"><label>Project Name</label><input type="text" id="project_name"></div>
                 <div class="form-group"><label>Department Origin</label><input type="text" id="origin_dept"></div>
                 <div class="form-group"><label>Staff Name</label><input type="text" id="staff_name"></div>
-                <div class="form-group full-width"><label>Route / Target Departments (Digital Log Only)</label><input type="text" id="departments" placeholder="e.g. Finance, Billing, HR"></div>
+                <div class="form-group full-width">
+                    <label>Routing Plan (Enter departments separated by commas)</label>
+                    <input type="text" id="departments" placeholder="e.g. Women's Health, Laboratory, Finance">
+                </div>
             </div>
             <button class="btn-primary" id="proc-btn" onclick="processAll()">SAVE & GENERATE</button>
         </div>
@@ -121,6 +133,12 @@
                     <div class="info-row"><strong>ORIGIN DEPT:</strong> <span id="slip-origin">---</span></div>
                     <div class="info-row"><strong>STAFF:</strong> <span id="slip-staff">---</span></div>
                     <div class="info-row"><strong>DATE:</strong> <span id="slip-date">---</span></div>
+                    
+                    <!-- NEW: Routing Plan Display Section -->
+                    <div class="routing-plan-box">
+                        <div class="routing-title">DOCUMENT ROUTING PLAN:</div>
+                        <div id="slip-routing">---</div>
+                    </div>
                 </div>
                 <div class="qr-side">
                     <div class="scan-instruction">Scan Me to Update Us ↓</div>
@@ -133,7 +151,6 @@
     </div>
 
     <script>
-        // REMOVED /rest/v1/ FROM THE URL TO FIX THE "INVALID PATH" ERROR
         const _supabase = supabase.createClient(
             'https://onozvyuowebbwuvcqlzt.supabase.co', 
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0'
@@ -153,21 +170,30 @@
             const proj = document.getElementById('project_name').value;
             const origin = document.getElementById('origin_dept').value;
             const staff = document.getElementById('staff_name').value;
-            const depts = document.getElementById('departments').value;
+            const deptsInput = document.getElementById('departments').value;
 
             if(!cat || !proj) return alert("Fill Name and Category");
             btn.disabled = true;
+
+            // Convert comma-separated string to a clean Array
+            const deptsArray = deptsInput.split(',').map(d => d.trim()).filter(d => d !== "");
 
             let hex = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
             const fullLink = `https://vallealfrie-png.github.io/Document-Tracker/track.html?id=${hex}`;
 
             const { error } = await _supabase.from('combined_routing_logs').insert([{
-                category: cat, project_name: proj, qr_code: hex, qr_link: fullLink, 
-                origin_dept: origin, staff_name: staff, departments: depts.split(','), status: 'Active'
+                category: cat, 
+                project_name: proj, 
+                qr_code: hex, 
+                qr_link: fullLink, 
+                origin_dept: origin, 
+                staff_name: staff, 
+                departments: deptsArray, // Sending as Array
+                status: 'Active'
             }]);
 
             if(!error) {
-                renderSlip(cat, proj, hex, origin, staff, fullLink);
+                renderSlip(cat, proj, hex, origin, staff, fullLink, deptsArray);
                 document.getElementById('print-btn').style.display = 'block';
                 btn.innerText = "SAVED";
                 loadCategories();
@@ -183,20 +209,29 @@
             if(!searchId) return;
             const { data, error } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', searchId).single();
             if (data) {
-                renderSlip(data.category, data.project_name, data.qr_code, data.origin_dept, data.staff_name, data.qr_link);
+                renderSlip(data.category, data.project_name, data.qr_code, data.origin_dept, data.staff_name, data.qr_link, data.departments);
                 document.getElementById('print-btn').style.display = 'block';
             } else { 
                 alert(error ? error.message : "ID not found."); 
             }
         }
 
-        function renderSlip(cat, proj, hex, origin, staff, link) {
+        function renderSlip(cat, proj, hex, origin, staff, link, depts) {
             document.getElementById('slip-cat').innerText = cat;
             document.getElementById('slip-proj').innerText = proj;
             document.getElementById('display-hex').innerText = hex;
             document.getElementById('slip-origin').innerText = origin || "N/A";
             document.getElementById('slip-staff').innerText = staff || "N/A";
             document.getElementById('slip-date').innerText = new Date().toLocaleDateString();
+
+            // Formatting the departments for the slip
+            const routingDisplay = document.getElementById('slip-routing');
+            if (depts && depts.length > 0) {
+                // Joins array with arrows for a clear visual path
+                routingDisplay.innerText = depts.join(' ➔ ');
+            } else {
+                routingDisplay.innerText = "No specific routing plan.";
+            }
 
             const qrContainer = document.getElementById('qr-target');
             qrContainer.innerHTML = "";
