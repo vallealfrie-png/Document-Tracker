@@ -128,11 +128,11 @@
 
   <!-- App Business Logic Core -->
   <script>
-    // Live credentials applied directly
     const SUPABASE_URL = "https://onozvyuowebbwuvcqlzt.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0";
     
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Assigned directly to global scope to prevent duplicated "const" syntax errors
+    window.supabaseAuthClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // View switcher utility
     function switchView(viewId) {
@@ -160,7 +160,7 @@
       const email = document.getElementById('signup-email').value;
       const password = document.getElementById('signup-password').value;
 
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await window.supabaseAuthClient.auth.signUp({ email, password });
       if (error) return showToast(error.message, true);
       
       showToast("Registration successful! Check your email inbox to confirm registration.");
@@ -172,18 +172,20 @@
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await window.supabaseAuthClient.auth.signInWithPassword({ email, password });
       if (error) return showToast(error.message, true);
 
       showToast("Logged in successfully! Redirecting...");
-      console.log("Logged user session data:", data);
+      setTimeout(() => {
+        window.location.href = "unified-log.html";
+      }, 1000);
     });
 
     // 3. GitHub OAuth Handler
     document.getElementById('github-btn').addEventListener('click', async () => {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await window.supabaseAuthClient.auth.signInWithOAuth({
         provider: 'github',
-        options: { redirectTo: window.location.origin }
+        options: { redirectTo: window.location.origin + "/unified-log.html" }
       });
       if (error) showToast(error.message, true);
     });
@@ -193,8 +195,8 @@
       e.preventDefault();
       const email = document.getElementById('forgot-email').value;
 
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '?type=recovery',
+      const { data, error } = await window.supabaseAuthClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname + '?type=recovery',
       });
       if (error) return showToast(error.message, true);
 
@@ -206,21 +208,29 @@
       e.preventDefault();
       const newPassword = document.getElementById('new-password').value;
 
-      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+      const { data, error } = await window.supabaseAuthClient.auth.updateUser({ password: newPassword });
       if (error) return showToast(error.message, true);
 
-      showToast("Password updated successfully! Switching to Login view...");
+      showToast("Password updated! Accessing workspace dashboard...");
       setTimeout(() => {
-        window.history.replaceState({}, document.title, window.location.pathname); // Clear URL params
-        switchView('login-view');
-      }, 2000);
+        window.location.href = "unified-log.html";
+      }, 1500);
     });
 
     // 6. Access Token Callback Routing Check (Handles recovery context links)
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       const urlParams = new URLSearchParams(window.location.search);
+      
+      // If landing back from an email recovery link
       if (urlParams.get('type') === 'recovery' || window.location.hash.includes('type=recovery')) {
         switchView('update-password-view');
+        return;
+      }
+
+      // Check if an active authenticated OAuth/GitHub session exists on page load
+      const { data: { session } } = await window.supabaseAuthClient.auth.getSession();
+      if (session) {
+        window.location.href = "unified-log.html";
       }
     });
   </script>
