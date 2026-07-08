@@ -222,7 +222,7 @@
         const { data, error } = await _supabase.auth.signInWithOAuth({
             provider: provider,
             options: {
-                redirectTo: window.location.origin + window.location.pathname.replace('index.html', 'dashboard.html')
+                redirectTo: 'https://vallealfrie-png.github.io/Document-Tracker/dashboard.html'
             }
         });
 
@@ -242,11 +242,12 @@
         const team = document.getElementById('reg-team').value || 'General';
         const password = document.getElementById('reg-password').value;
 
-        // Sign up user via Supabase Auth and attach custom key metadata matching the trigger requirements
+        // Hardcoded emailRedirectTo path overrides project defaults and forces consistency
         const { data, error } = await _supabase.auth.signUp({
             email: email,
             password: password,
             options: {
+                emailRedirectTo: 'https://vallealfrie-png.github.io/Document-Tracker/',
                 data: {
                     name: name,
                     department: department,
@@ -258,11 +259,11 @@
         if (error) {
             showAlert(error.message, 'error');
         } else {
-            showAlert("Registration complete! Redirecting to entry layout...", "success");
+            showAlert("Registration complete! Check your email for the confirmation link.", "success");
             document.getElementById('register-form').reset();
             setTimeout(() => {
                 switchView('login');
-            }, 2000);
+            }, 3000);
         }
     }
 
