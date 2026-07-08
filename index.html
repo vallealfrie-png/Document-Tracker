@@ -34,13 +34,19 @@
         .brand-section h1 { font-size: 1.4rem; color: #333; margin-bottom: 5px; }
         .brand-section p { font-size: 0.85rem; color: #666; }
 
-        .form-group { margin-bottom: 18px; }
+        .form-group { margin-bottom: 18px; position: relative; }
         .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: #555; text-transform: uppercase; margin-bottom: 6px; }
         .form-group input, .form-group select {
             width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px;
             font-size: 0.95rem; transition: border-color 0.2s; outline: none;
         }
         .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+
+        .forgot-link {
+            text-align: right; margin-top: -10px; margin-bottom: 15px; font-size: 0.85rem;
+        }
+        .forgot-link span { color: var(--primary); cursor: pointer; }
+        .forgot-link span:hover { text-decoration: underline; }
 
         .auth-btn {
             width: 100%; background: var(--primary); color: white; border: none;
@@ -49,18 +55,14 @@
         }
         .auth-btn:hover { background: var(--primary-hover); }
 
-        /* Social Divider Style */
         .divider {
             display: flex; align-items: center; text-align: center;
             margin: 20px 0; color: #888; font-size: 0.85rem;
         }
-        .divider::before, .divider::after {
-            content: ''; flex: 1; border-bottom: 1px solid #e0e0e0;
-        }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #e0e0e0; }
         .divider:not(:empty)::before { margin-right: .5em; }
         .divider:not(:empty)::after { margin-left: .5em; }
 
-        /* Social Media Button Grid Layout */
         .social-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .social-btn {
             display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -108,10 +110,12 @@
                 <label>Password</label>
                 <input type="password" id="login-password" required placeholder="••••••••">
             </div>
+            <div class="forgot-link">
+                <span onclick="switchView('forgot')">Forgot Password?</span>
+            </div>
             <button type="submit" class="auth-btn">Sign In</button>
         </form>
 
-        <!-- Social Platform Sign In Blocks -->
         <div class="divider">or continue with</div>
         <div class="social-grid">
             <button class="social-btn btn-google" onclick="handleSocialLogin('google')">
@@ -166,10 +170,34 @@
             Already have an account? <span onclick="switchView('login')">Sign In here</span>
         </div>
     </div>
+
+    <!-- FORGOT PASSWORD FORM CONTAINER -->
+    <div id="forgot-view" class="form-view">
+        <form id="forgot-form" onsubmit="handleForgotPassword(event)">
+            <div class="form-group">
+                <label>Enter Your Registered Email</label>
+                <input type="email" id="forgot-email" required placeholder="name@perpetualhelp.com.ph">
+            </div>
+            <button type="submit" class="auth-btn">Send Reset Link</button>
+        </form>
+        <div class="toggle-link">
+            Back to <span onclick="switchView('login')">Sign In</span>
+        </div>
+    </div>
+
+    <!-- NEW PASSWORD (UPDATE) CONTAINER -->
+    <div id="reset-view" class="form-view">
+        <form id="reset-form" onsubmit="handleUpdatePassword(event)">
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" id="reset-password" required minlength="6" placeholder="Minimum 6 characters">
+            </div>
+            <button type="submit" class="auth-btn">Update Password</button>
+        </form>
+    </div>
 </div>
 
 <script>
-    // Initialize Supabase Client
     const _supabase = supabase.createClient('https://onozvyuowebbwuvcqlzt.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0');
 
     function showAlert(message, type = 'error') {
@@ -190,87 +218,119 @@
         if (view === 'register') {
             document.getElementById('register-view').classList.add('active');
             document.getElementById('portal-subtitle').innerText = "Register your internal employee profile";
+        } else if (view === 'forgot') {
+            document.getElementById('forgot-view').classList.add('active');
+            document.getElementById('portal-subtitle').innerText = "Recover your recovery credentials";
+        } else if (view === 'reset') {
+            document.getElementById('reset-view').classList.add('active');
+            document.getElementById('portal-subtitle').innerText = "Establish a strong new account password";
         } else {
             document.getElementById('login-view').classList.add('active');
             document.getElementById('portal-subtitle').innerText = "Sign in to manage active routing logs";
         }
     }
 
-    // Handle Login Authentication Task
     async function handleLogin(e) {
         e.preventDefault();
         clearAlert();
-        
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
 
         const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-
         if (error) {
             showAlert(error.message, 'error');
         } else {
             showAlert("Sign in successful! Redirecting...", "success");
-            setTimeout(() => {
-                window.location.href = 'dashboard.html'; 
-            }, 1000);
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
         }
     }
 
-    // Handle Social OAuth Integration Task
     async function handleSocialLogin(provider) {
         clearAlert();
         const { data, error } = await _supabase.auth.signInWithOAuth({
             provider: provider,
-            options: {
-                redirectTo: 'https://vallealfrie-png.github.io/Document-Tracker/dashboard.html'
-            }
+            options: { redirectTo: 'https://vallealfrie-png.github.io/Document-Tracker/dashboard.html' }
         });
-
-        if (error) {
-            showAlert(error.message, 'error');
-        }
+        if (error) showAlert(error.message, 'error');
     }
 
-    // Handle Account Registration Task
     async function handleRegister(e) {
         e.preventDefault();
         clearAlert();
-
         const name = document.getElementById('reg-name').value;
         const email = document.getElementById('reg-email').value;
         const department = document.getElementById('reg-dept').value;
         const team = document.getElementById('reg-team').value || 'General';
         const password = document.getElementById('reg-password').value;
 
-        // Hardcoded emailRedirectTo path overrides project defaults and forces consistency
         const { data, error } = await _supabase.auth.signUp({
             email: email,
             password: password,
             options: {
                 emailRedirectTo: 'https://vallealfrie-png.github.io/Document-Tracker/',
-                data: {
-                    name: name,
-                    department: department,
-                    team: team
-                }
+                data: { name, department, team }
             }
         });
 
         if (error) {
             showAlert(error.message, 'error');
         } else {
-            showAlert("Registration complete! Check your email for the confirmation link.", "success");
+            showAlert("Registration complete! Check your email for the activation link.", "success");
             document.getElementById('register-form').reset();
-            setTimeout(() => {
-                switchView('login');
-            }, 3000);
+            setTimeout(() => { switchView('login'); }, 3000);
         }
     }
 
-    // Check if user is already signed in on initial page load
+    // NEW: Handle Requesting Password Reset Link
+    async function handleForgotPassword(e) {
+        e.preventDefault();
+        clearAlert();
+        const email = document.getElementById('forgot-email').value;
+
+        const { data, error } = await _supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: 'https://vallealfrie-png.github.io/Document-Tracker/?view=reset',
+        });
+
+        if (error) {
+            showAlert(error.message, 'error');
+        } else {
+            showAlert("Password reset link sent! Please check your corporate inbox.", "success");
+            document.getElementById('forgot-form').reset();
+        }
+    }
+
+    // NEW: Handle Saving the Newly Entered Password
+    async function handleUpdatePassword(e) {
+        e.preventDefault();
+        clearAlert();
+        const newPassword = document.getElementById('reset-password').value;
+
+        const { data, error } = await _supabase.auth.updateUser({ password: newPassword });
+
+        if (error) {
+            showAlert(error.message, 'error');
+        } else {
+            showAlert("Password updated successfully! Redirecting to login view...", "success");
+            document.getElementById('reset-form').reset();
+            setTimeout(() => {
+                // Clear URL parameters cleanly and go back to sign in
+                window.history.replaceState({}, document.title, window.location.pathname);
+                switchView('login');
+            }, 2500);
+        }
+    }
+
+    // Lifecycle Routing Watcher
     document.addEventListener('DOMContentLoaded', async () => {
+        // Detect if the user arrived here via clicking a password reset email link
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('view') === 'reset' || window.location.hash.includes('type=recovery')) {
+            switchView('reset');
+            return;
+        }
+
         const { data: { session } } = await _supabase.auth.getSession();
-        if (session) {
+        if (session && !window.location.hash.includes('type=recovery')) {
             window.location.href = 'dashboard.html';
         }
     });
