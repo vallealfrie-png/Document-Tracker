@@ -131,8 +131,13 @@
     const SUPABASE_URL = "https://onozvyuowebbwuvcqlzt.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0";
     
-    // Assigned directly to global scope to prevent duplicated "const" syntax errors
+    // Assigned directly to global scope to prevent duplicated variable declaration crashes
     window.supabaseAuthClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Dynamic clean helper to retrieve absolute URL path directory structure
+    function getCleanBaseDirectory() {
+      return window.location.origin + window.location.pathname.replace(/[^\/]*$/, '');
+    }
 
     // View switcher utility
     function switchView(viewId) {
@@ -177,7 +182,7 @@
 
       showToast("Logged in successfully! Redirecting...");
       setTimeout(() => {
-        window.location.href = "unified-log.html";
+        window.location.href = getCleanBaseDirectory() + "unified-log.html";
       }, 1000);
     });
 
@@ -185,7 +190,9 @@
     document.getElementById('github-btn').addEventListener('click', async () => {
       const { data, error } = await window.supabaseAuthClient.auth.signInWithOAuth({
         provider: 'github',
-        options: { redirectTo: window.location.origin + "/unified-log.html" }
+        options: { 
+          redirectTo: getCleanBaseDirectory() + "unified-log.html" 
+        }
       });
       if (error) showToast(error.message, true);
     });
@@ -213,24 +220,24 @@
 
       showToast("Password updated! Accessing workspace dashboard...");
       setTimeout(() => {
-        window.location.href = "unified-log.html";
+        window.location.href = getCleanBaseDirectory() + "unified-log.html";
       }, 1500);
     });
 
-    // 6. Access Token Callback Routing Check (Handles recovery context links)
+    // 6. Access Token Callback Routing Check (Handles recovery context links and active session checks)
     window.addEventListener('DOMContentLoaded', async () => {
       const urlParams = new URLSearchParams(window.location.search);
       
-      // If landing back from an email recovery link
+      // Check if landing back from an email recovery password switch link
       if (urlParams.get('type') === 'recovery' || window.location.hash.includes('type=recovery')) {
         switchView('update-password-view');
         return;
       }
 
-      // Check if an active authenticated OAuth/GitHub session exists on page load
+      // Check if an active authenticated GitHub session exists on initialization
       const { data: { session } } = await window.supabaseAuthClient.auth.getSession();
       if (session) {
-        window.location.href = "unified-log.html";
+        window.location.href = getCleanBaseDirectory() + "unified-log.html";
       }
     });
   </script>
