@@ -15,16 +15,21 @@
             border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
-        .nav-links { display: flex; gap: 8px; }
+        .nav-links { display: flex; gap: 8px; align-items: center; }
         .nav-btn {
             display: flex; align-items: center; gap: 8px; text-decoration: none;
             color: #666; font-size: 0.8rem; font-weight: 600; padding: 10px 14px;
             border-radius: 8px; border: 1px solid #eee; transition: all 0.3s ease;
             cursor: pointer; text-transform: uppercase;
+            user-select: none;
         }
         .nav-btn:hover, .nav-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
         .nav-btn.inbound-active { background: var(--inbound); color: white; border-color: var(--inbound); }
         
+        /* Logout Button Custom Styling */
+        .nav-btn.btn-logout { border-color: #f5c6cb; color: var(--secondary); }
+        .nav-btn.btn-logout:hover { background: var(--secondary); color: white; border-color: var(--secondary); }
+
         .btn-finish { 
             background: var(--success); color: white; border: none; padding: 8px 15px; 
             border-radius: 5px; cursor: pointer; font-weight: bold; float: right; 
@@ -76,8 +81,10 @@
         <div class="nav-links">
             <div class="nav-btn active" id="nav-live" onclick="showView('live')">QR Tracking</div>
             <div class="nav-btn" id="nav-inbound" onclick="showView('inbound')">Inbound Logs</div>
+            <a href="unified-log.html" class="nav-btn" id="nav-outbound">Outbound Logs</a>
             <div class="nav-btn" id="nav-finished" onclick="showView('finished')">Archive</div>
             <a href="index.html" class="nav-btn">Home</a>
+            <div class="nav-btn btn-logout" onclick="handleLogout()">Log Out</div>
         </div>
     </div>
 
@@ -108,6 +115,7 @@
     
     let currentView = 'live'; 
     let audioEnabled = false;
+    let currentUserDept = null; 
 
     function enableAudio() {
         audioEnabled = true;
@@ -120,116 +128,167 @@
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active', 'inbound-active'));
         
         const activeBtn = document.getElementById(`nav-${view}`);
-        if(view === 'inbound') activeBtn.classList.add('inbound-active');
-        else activeBtn.classList.add('active');
+        if(activeBtn) {
+            if(view === 'inbound') activeBtn.classList.add('inbound-active');
+            else activeBtn.classList.add('active');
+        }
 
         document.getElementById('page-title').innerText = view.charAt(0).toUpperCase() + view.slice(1) + " View";
         loadDashboard();
     }
 
+    function applyDepartmentFilter(query, targetColumn = 'department') {
+        if (currentUserDept) {
+            return query.eq(targetColumn, currentUserDept);
+        }
+        return query;
+    }
+
+    async function handleLogout() {
+        if (_supabase.auth && typeof _supabase.auth.signOut === 'function') {
+            try {
+                await _supabase.auth.signOut();
+            } catch (err) {
+                console.error("Session clear warning:", err);
+            }
+        }
+        currentUserDept = null;
+        window.location.href = 'index.html';
+    }
+
     async function loadDashboard() {
         const scanBody = document.getElementById('scan-body');
         const headRow = document.getElementById('table-head-row');
+        if (!scanBody || !headRow) return;
+
         scanBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Fetching latest data...</td></tr>';
 
-        // Load Global Stats
-        const { count: finCount } = await _supabase.from('finished_documents').select('*', { count: 'exact', head: true });
-        const { count: inCount } = await _supabase.from('inbound_logs').select('*', { count: 'exact', head: true });
-        document.getElementById('count-finished').innerText = finCount || 0;
-        document.getElementById('count-inbound').innerText = inCount || 0;
+        try {
+            const { count: finCount } = await _supabase.from('finished_documents').select('*', { count: 'exact', head: true });
+            const { count: inCount } = await _supabase.from('inbound_logs').select('*', { count: 'exact', head: true });
+            document.getElementById('count-finished').innerText = finCount || 0;
+            document.getElementById('count-inbound').innerText = inCount || 0;
 
-        if (currentView === 'live') {
-            headRow.innerHTML = `<th>Update</th><th>Document</th><th>Dept</th><th>Handler</th><th>Status</th>`;
-            const { data: scans } = await _supabase.from('document_tracking_events').select('*').order('created_at', { ascending: false });
-            const { data: masterDocs } = await _supabase.from('combined_routing_logs').select('qr_code, project_name');
-            const { data: finishedIDs } = await _supabase.from('finished_documents').select('qr_code');
-            
-            const nameMap = Object.fromEntries(masterDocs?.map(d => [d.qr_code, d.project_name]) || []);
-            const finishedSet = new Set(finishedIDs?.map(f => f.qr_code));
-            const grouped = {};
-
-            scans?.forEach(s => {
-                if (finishedSet.has(s.parent_qr_code)) return;
-                if (!grouped[s.parent_qr_code]) grouped[s.parent_qr_code] = [];
-                grouped[s.parent_qr_code].push(s);
-            });
-
-            // Map object to sortable array using the timestamp of the first (newest) item in each group
-            const sortedActiveDocs = Object.keys(grouped).map(qr => {
-                return {
-                    qr_code: qr,
-                    history: grouped[qr],
-                    latestEvent: grouped[qr][0]
-                };
-            }).sort((a, b) => new Date(b.latestEvent.created_at) - new Date(a.latestEvent.created_at));
-
-            document.getElementById('count-active').innerText = sortedActiveDocs.length;
-            scanBody.innerHTML = '';
-
-            sortedActiveDocs.forEach(item => {
-                const qr = item.qr_code;
-                const history = item.history;
-                const latest = item.latestEvent;
-                const pName = nameMap[qr] || "Unknown Project";
+            if (currentView === 'live') {
+                headRow.innerHTML = `<th>Update</th><th>Document</th><th>Dept</th><th>Handler</th><th>Status</th>`;
                 
-                const row = document.createElement('tr');
-                row.className = 'doc-row';
-                row.onclick = () => toggleHistory(qr);
-                row.innerHTML = `
-                    <td>${new Date(latest.created_at).toLocaleString('en-PH', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
-                    <td><strong>${pName}</strong><br><small>${qr}</small></td>
-                    <td><b style="color:var(--primary)">${latest.department}</b></td>
-                    <td>${latest.status === 'Picked Up' ? (latest.picked_up_by || '---') : (latest.received_by || '---')}</td>
-                    <td><span class="status-badge ${getStatusClass(latest.status)}">${latest.status}</span></td>`;
-                
-                const hRow = document.createElement('tr');
-                hRow.id = `history-${qr}`;
-                hRow.className = 'history-row';
-                hRow.innerHTML = `
-                    <td colspan="5">
-                        <div class="history-container">
-                            <button class="btn-finish" onclick="approveDocument('${qr}', '${pName}')">FINISH & ARCHIVE</button>
-                            <h4 style="margin-top:0">Full Routing History</h4>
-                            <table style="width:100%; background:white; border-radius:4px;">
-                                ${history.map(h => `<tr><td>${new Date(h.created_at).toLocaleString()}</td><td>${h.status} at ${h.department}</td><td>By: ${h.status==='Picked Up'?h.picked_up_by : h.received_by}</td></tr>`).join('')}
-                            </table>
-                        </div>
-                    </td>`;
-                scanBody.appendChild(row);
-                scanBody.appendChild(hRow);
-            });
+                let scansQuery = _supabase.from('document_tracking_events').select('*').order('created_at', { ascending: false });
+                scansQuery = applyDepartmentFilter(scansQuery, 'department');
+                const { data: scans, error: scansErr } = await scansQuery;
 
-        } else if (currentView === 'inbound') {
-            headRow.innerHTML = `<th>Received</th><th>Category</th><th>Project</th><th>Assigned To</th><th>Logged By</th><th>Status</th>`;
-            const { data: inbounds } = await _supabase.from('inbound_logs').select('*').order('created_at', { ascending: false });
-            
-            scanBody.innerHTML = '';
-            inbounds?.forEach(log => {
-                scanBody.innerHTML += `
-                    <tr>
+                const { data: masterDocs } = await _supabase.from('combined_routing_logs').select('qr_code, project_name');
+                const { data: finishedIDs } = await _supabase.from('finished_documents').select('qr_code');
+                
+                if (scansErr) throw scansErr;
+
+                const nameMap = Object.fromEntries(masterDocs?.map(d => [d.qr_code, d.project_name]) || []);
+                const finishedSet = new Set(finishedIDs?.map(f => f.qr_code));
+                const grouped = {};
+
+                scans?.forEach(s => {
+                    if (finishedSet.has(s.parent_qr_code)) return;
+                    if (!grouped[s.parent_qr_code]) grouped[s.parent_qr_code] = [];
+                    grouped[s.parent_qr_code].push(s);
+                });
+
+                const sortedActiveDocs = Object.keys(grouped).map(qr => {
+                    return {
+                        qr_code: qr,
+                        history: grouped[qr],
+                        latestEvent: grouped[qr][0]
+                    };
+                }).sort((a, b) => new Date(b.latestEvent.created_at) - new Date(a.latestEvent.created_at));
+
+                document.getElementById('count-active').innerText = sortedActiveDocs.length;
+                scanBody.innerHTML = '';
+
+                if(sortedActiveDocs.length === 0) {
+                    scanBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No active tracked documents found.</td></tr>';
+                    return;
+                }
+
+                sortedActiveDocs.forEach(item => {
+                    const qr = item.qr_code;
+                    const history = item.history;
+                    const latest = item.latestEvent;
+                    const pName = nameMap[qr] || "Unknown Project";
+                    
+                    const row = document.createElement('tr');
+                    row.className = 'doc-row';
+                    row.onclick = () => toggleHistory(qr);
+                    row.innerHTML = `
+                        <td>${new Date(latest.created_at).toLocaleString('en-PH', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
+                        <td><strong>${pName}</strong><br><small>${qr}</small></td>
+                        <td><b style="color:var(--primary)">${latest.department || '---'}</b></td>
+                        <td>${latest.status === 'Picked Up' ? (latest.picked_up_by || '---') : (latest.received_by || '---')}</td>
+                        <td><span class="status-badge ${getStatusClass(latest.status)}">${latest.status || 'Unknown'}</span></td>`;
+                    
+                    const hRow = document.createElement('tr');
+                    hRow.id = `history-${qr}`;
+                    hRow.className = 'history-row';
+                    hRow.innerHTML = `
+                        <td colspan="5">
+                            <div class="history-container">
+                                <button class="btn-finish" onclick="approveDocument('${qr}', '${pName}')">FINISH & ARCHIVE</button>
+                                <h4 style="margin-top:0">Full Routing History</h4>
+                                <table style="width:100%; background:white; border-radius:4px;">
+                                    ${history.map(h => `<tr><td>${new Date(h.created_at).toLocaleString()}</td><td>${h.status} at ${h.department}</td><td>By: ${h.status==='Picked Up'? (h.picked_up_by || '---') : (h.received_by || '---')}</td></tr>`).join('')}
+                                </table>
+                            </div>
+                        </td>`;
+                    scanBody.appendChild(row);
+                    scanBody.appendChild(hRow);
+                });
+
+            } else if (currentView === 'inbound') {
+                headRow.innerHTML = `<th>Received</th><th>Category</th><th>Project</th><th>Assigned To</th><th>Logged By</th><th>Status</th>`;
+                
+                let inboundQuery = _supabase.from('inbound_logs').select('*').order('created_at', { ascending: false });
+                inboundQuery = applyDepartmentFilter(inboundQuery, 'department');
+                const { data: inbounds } = await inboundQuery;
+                
+                scanBody.innerHTML = '';
+                if(!inbounds || inbounds.length === 0) {
+                    scanBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">No inbound records logged.</td></tr>';
+                    return;
+                }
+
+                inbounds.forEach(log => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
                         <td>${new Date(log.created_at).toLocaleString()}</td>
-                        <td><small>${log.category}</small></td>
-                        <td><strong>${log.project_name}</strong></td>
-                        <td>${log.assigned_to}</td>
-                        <td>${log.logged_by}</td>
-                        <td><span class="status-badge status-inbound">${log.status || 'Pending'}</span></td>
-                    </tr>`;
-            });
+                        <td><small>${log.category || '---'}</small></td>
+                        <td><strong>${log.project_name || '---'}</strong></td>
+                        <td>${log.assigned_to || '---'}</td>
+                        <td>${log.logged_by || '---'}</td>
+                        <td><span class="status-badge status-inbound">${log.status || 'Pending'}</span></td>`;
+                    scanBody.appendChild(row);
+                });
 
-        } else {
-            headRow.innerHTML = `<th>Finished Date</th><th>Project Name</th><th>Approved By</th><th>Final Dept</th><th>Status</th>`;
-            const { data: finished } = await _supabase.from('finished_documents').select('*').order('completed_at', { ascending: false });
-            scanBody.innerHTML = '';
-            finished?.forEach(f => {
-                scanBody.innerHTML += `
-                    <tr>
+            } else {
+                headRow.innerHTML = `<th>Finished Date</th><th>Project Name</th><th>Approved By</th><th>Final Dept</th><th>Status</th>`;
+                const { data: finished } = await _supabase.from('finished_documents').select('*').order('completed_at', { ascending: false });
+                
+                scanBody.innerHTML = '';
+                if(!finished || finished.length === 0) {
+                    scanBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No archived items found.</td></tr>';
+                    return;
+                }
+
+                finished.forEach(f => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
                         <td>${new Date(f.completed_at).toLocaleString()}</td>
-                        <td><strong>${f.project_name}</strong><br><small>${f.qr_code}</small></td>
-                        <td>${f.approved_by}</td>
-                        <td>${f.final_department}</td>
-                        <td><span class="status-badge status-finished">ARCHIVED</span></td>
-                    </tr>`;
-            });
+                        <td><strong>${f.project_name || '---'}</strong><br><small>${f.qr_code}</small></td>
+                        <td>${f.approved_by || '---'}</td>
+                        <td>${f.final_department || '---'}</td>
+                        <td><span class="status-badge status-finished">ARCHIVED</span></td>`;
+                    scanBody.appendChild(row);
+                });
+            }
+        } catch (err) {
+            console.error("Dashboard Error Encountered:", err);
+            scanBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red; padding:20px;">Failed to process live logs: ${err.message}</td></tr>`;
         }
     }
 
@@ -256,7 +315,9 @@
 
     function toggleHistory(qr) {
         const row = document.getElementById(`history-${qr}`);
-        row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
+        if(row) {
+            row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
+        }
     }
 
     function getStatusClass(status) {
@@ -269,7 +330,10 @@
 
     function triggerAlert(msg) {
         const toast = document.getElementById('notification-toast');
-        document.getElementById('toast-msg').innerText = msg;
+        const toastMsg = document.getElementById('toast-msg');
+        if(!toast || !toastMsg) return;
+
+        toastMsg.innerText = msg;
         toast.style.display = 'block';
         if (audioEnabled) document.getElementById('notif-sound').play().catch(() => {});
         setTimeout(() => { toast.style.display = 'none'; }, 8000);
@@ -287,8 +351,10 @@
         ).subscribe();
     }
 
-    loadDashboard();
-    startListener();
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDashboard();
+        startListener();
+    });
 </script>
 </body>
 </html>
