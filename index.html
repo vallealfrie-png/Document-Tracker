@@ -47,17 +47,26 @@
         <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all duration-150 transform active:scale-[0.98] cursor-pointer shadow-lg shadow-indigo-600/20">Sign In</button>
       </form>
 
-      <div class="relative flex py-2 items-center text-slate-600">
+      <div class="relative flex py-1 items-center text-slate-600">
         <div class="flex-grow border-t border-slate-800"></div>
         <span class="flex-shrink mx-4 text-xs font-bold uppercase tracking-wider text-slate-500">or continue with</span>
         <div class="flex-grow border-t border-slate-800"></div>
       </div>
 
-      <!-- GitHub OAuth Button -->
-      <button id="github-btn" class="w-full bg-slate-900 hover:bg-slate-850 border border-slate-700/60 text-white font-medium py-3 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-3 cursor-pointer">
-        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-        GitHub Account
-      </button>
+      <!-- OAuth Buttons Wrapper -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Google OAuth Button -->
+        <button id="google-btn" class="bg-slate-900 hover:bg-slate-850 border border-slate-700/60 text-white text-sm font-medium py-3 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C17.955 2.192 15.34 1 12.24 1c-6.075 0-11 4.925-11 11s4.925 11 11 11c6.34 0 10.557-4.437 10.557-10.714 0-.724-.075-1.275-.175-1.711H12.24z"/></svg>
+          Google
+        </button>
+
+        <!-- GitHub OAuth Button -->
+        <button id="github-btn" class="bg-slate-900 hover:bg-slate-850 border border-slate-700/60 text-white text-sm font-medium py-3 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+        </button>
+      </div>
 
       <p class="text-center text-sm text-slate-400">
         Don't have an account? <button onclick="switchView('signup-view')" class="text-indigo-400 font-medium hover:underline">Sign up</button>
@@ -131,7 +140,6 @@
     const SUPABASE_URL = "https://onozvyuowebbwuvcqlzt.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0";
     
-    // Assigned directly to global scope to prevent duplicated variable declaration crashes
     window.supabaseAuthClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Dynamic clean helper to retrieve absolute URL path directory structure
@@ -139,14 +147,12 @@
       return window.location.origin + window.location.pathname.replace(/[^\/]*$/, '');
     }
 
-    // View switcher utility
     function switchView(viewId) {
       document.querySelectorAll('.auth-view').forEach(view => view.classList.add('hidden'));
       document.getElementById(viewId).classList.remove('hidden');
       hideToast();
     }
 
-    // Interactive messaging toast wrapper
     function showToast(message, isError = false) {
       const toast = document.getElementById('toast');
       toast.innerText = message;
@@ -182,7 +188,7 @@
 
       showToast("Logged in successfully! Redirecting...");
       setTimeout(() => {
-        window.location.href = getCleanBaseDirectory() + "unified-log.html";
+        window.location.href = getCleanBaseDirectory() + "dashboard.html";
       }, 1000);
     });
 
@@ -190,14 +196,27 @@
     document.getElementById('github-btn').addEventListener('click', async () => {
       const { data, error } = await window.supabaseAuthClient.auth.signInWithOAuth({
         provider: 'github',
+        options: { redirectTo: getCleanBaseDirectory() + "dashboard.html" }
+      });
+      if (error) showToast(error.message, true);
+    });
+
+    // 4. Google OAuth Handler
+    document.getElementById('google-btn').addEventListener('click', async () => {
+      const { data, error } = await window.supabaseAuthClient.auth.signInWithOAuth({
+        provider: 'google',
         options: { 
-          redirectTo: getCleanBaseDirectory() + "unified-log.html" 
+          redirectTo: getCleanBaseDirectory() + "dashboard.html",
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       });
       if (error) showToast(error.message, true);
     });
 
-    // 4. Send Forgot Password Reset Request Handler
+    // 5. Send Forgot Password Reset Request Handler
     document.getElementById('forgot-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('forgot-email').value;
@@ -210,7 +229,7 @@
       showToast("Reset link dispatched! Please check your spam or inbox folders.");
     });
 
-    // 5. Update Password Form Submission Handler
+    // 6. Update Password Form Submission Handler
     document.getElementById('update-password-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const newPassword = document.getElementById('new-password').value;
@@ -220,24 +239,22 @@
 
       showToast("Password updated! Accessing workspace dashboard...");
       setTimeout(() => {
-        window.location.href = getCleanBaseDirectory() + "unified-log.html";
+        window.location.href = getCleanBaseDirectory() + "dashboard.html";
       }, 1500);
     });
 
-    // 6. Access Token Callback Routing Check (Handles recovery context links and active session checks)
+    // 7. Access Token Callback Routing Check
     window.addEventListener('DOMContentLoaded', async () => {
       const urlParams = new URLSearchParams(window.location.search);
       
-      // Check if landing back from an email recovery password switch link
       if (urlParams.get('type') === 'recovery' || window.location.hash.includes('type=recovery')) {
         switchView('update-password-view');
         return;
       }
 
-      // Check if an active authenticated GitHub session exists on initialization
       const { data: { session } } = await window.supabaseAuthClient.auth.getSession();
       if (session) {
-        window.location.href = getCleanBaseDirectory() + "unified-log.html";
+        window.location.href = getCleanBaseDirectory() + "dashboard.html";
       }
     });
   </script>
