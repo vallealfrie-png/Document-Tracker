@@ -1,166 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>PHMC Inbound Document Log</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; }
-        .header { display: flex; align-items: center; justify-content: space-between; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .header img { width: 150px; }
-        .header h2 { color: #1a73ba; margin: 0; }
-        
-        .log-form { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
-        .form-group { display: flex; flex-direction: column; }
-        label { font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 5px; text-transform: uppercase; }
-        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-size: 1rem; }
-        
-        .full-width { grid-column: span 3; }
-        .readonly-field { background: #eee; color: #777; cursor: not-allowed; }
-        
-        button { background: #1a73ba; color: white; border: none; padding: 15px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        button:hover { background: #155a8a; }
-
-        .registry { margin-top: 30px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #1a73ba; color: white; padding: 12px; text-align: left; font-size: 0.85rem; }
-        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.9rem; color: #333; }
-        .status-tag { background: #eef6ff; color: #1a73ba; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication Portal</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- Supabase JS Client library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  </style>
 </head>
-<body>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 selection:bg-indigo-500 selection:text-white">
 
-<div class="container">
-    <div class="header">
-        <img src="https://i.imgur.com/VbZKWAf.png" alt="PHMC Logo">
-        <h2>Inbound Document Log</h2>
+  <!-- Main Auth Container -->
+  <div class="w-full max-w-md p-8 rounded-2xl glass-panel shadow-2xl relative overflow-hidden transition-all duration-300">
+    
+    <!-- Notification/Error Toast -->
+    <div id="toast" class="hidden mb-4 p-3 rounded-lg text-sm font-medium text-center transition-all duration-200"></div>
+
+    <!-- 1. LOGIN FORM -->
+    <div id="login-view" class="auth-view space-y-6">
+      <div class="text-center">
+        <h2 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">Welcome Back</h2>
+        <p class="text-sm text-slate-400 mt-1">Sign in to manage your workspace</p>
+      </div>
+
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email Address</label>
+          <input type="email" id="login-email" required class="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600" placeholder="you@example.com">
+        </div>
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Password</label>
+            <button type="button" onclick="switchView('forgot-view')" class="text-xs text-indigo-400 hover:underline">Forgot?</button>
+          </div>
+          <input type="password" id="login-password" required class="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600" placeholder="••••••••">
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all duration-150 transform active:scale-[0.98] cursor-pointer shadow-lg shadow-indigo-600/20">Sign In</button>
+      </form>
+
+      <div class="relative flex py-1 items-center text-slate-600">
+        <div class="flex-grow border-t border-slate-800"></div>
+        <span class="flex-shrink mx-4 text-xs font-bold uppercase tracking-wider text-slate-500">or continue with</span>
+        <div class="flex-grow border-t border-slate-800"></div>
+      </div>
+
+      <!-- OAuth Buttons Wrapper -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Google OAuth Button -->
+        <button id="google-btn" class="bg-slate-900 hover:bg-slate-850 border border-slate-700/60 text-white text-sm font-medium py-3 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C17.955 2.192 15.34 1 12.24 1c-6.075 0-11 4.925-11 11s4.925 11 11 11c6.34 0 10.557-4.437 10.557-10.714 0-.724-.075-1.275-.175-1.711H12.24z"/></svg>
+          Google
+        </button>
+
+        <!-- GitHub OAuth Button -->
+        <button id="github-btn" class="bg-slate-900 hover:bg-slate-850 border border-slate-700/60 text-white text-sm font-medium py-3 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+        </button>
+      </div>
+
+      <p class="text-center text-sm text-slate-400">
+        Don't have an account? <button onclick="switchView('signup-view')" class="text-indigo-400 font-medium hover:underline">Sign up</button>
+      </p>
     </div>
 
-    <div class="log-form">
-        <div class="form-group">
-            <label>Category</label>
-            <input list="category-list" id="category" placeholder="Type or select...">
-            <datalist id="category-list"></datalist>
+    <!-- 2. SIGN UP FORM -->
+    <div id="signup-view" class="auth-view hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">Create Account</h2>
+        <p class="text-sm text-slate-400 mt-1">Get started with your new profile</p>
+      </div>
+
+      <form id="signup-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email Address</label>
+          <input type="email" id="signup-email" required class="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600" placeholder="you@example.com">
         </div>
-        <div class="form-group">
-            <label>Project Name</label>
-            <input type="text" id="project_name" placeholder="Project name">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Password</label>
+          <input type="password" id="signup-password" required class="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600" placeholder="••••••••">
         </div>
-        <div class="form-group">
-            <label>Assign To</label>
-            <input type="text" id="assigned_to" placeholder="Assignee">
-        </div>
-        <div class="form-group">
-            <label>Logged By</label>
-            <input type="text" id="logged_by" placeholder="Your name">
-        </div>
-        <div class="form-group" style="grid-column: span 2;">
-            <label>Timestamp (Automatic)</label>
-            <input type="text" id="timestamp" class="readonly-field" readonly>
-        </div>
-        <button class="full-width" onclick="submitInboundLog()">LOG DOCUMENT</button>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all duration-150 transform active:scale-[0.98] cursor-pointer shadow-lg shadow-indigo-600/20">Register</button>
+      </form>
+
+      <p class="text-center text-sm text-slate-400">
+        Already have an account? <button onclick="switchView('login-view')" class="text-indigo-400 font-medium hover:underline">Sign in</button>
+      </p>
     </div>
 
-    <div class="registry">
-        <table>
-            <thead>
-                <tr>
-                    <th>Date & Time</th>
-                    <th>Category</th>
-                    <th>Project</th>
-                    <th>Assigned To</th>
-                    <th>Logged By</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="log-table-body"></tbody>
-        </table>
+    <!-- 3. FORGOT PASSWORD FORM -->
+    <div id="forgot-view" class="auth-view hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-bold tracking-tight text-white">Reset Password</h2>
+        <p class="text-sm text-slate-400 mt-1">We'll send a magic recovery link to your inbox</p>
+      </div>
+
+      <form id="forgot-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email Address</label>
+          <input type="email" id="forgot-email" required class="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600" placeholder="you@example.com">
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-all duration-150 cursor-pointer">Send Recovery Link</button>
+      </form>
+
+      <p class="text-center text-sm text-slate-400">
+        Back to <button onclick="switchView('login-view')" class="text-indigo-400 font-medium hover:underline">Sign in</button>
+      </p>
     </div>
-</div>
 
-<script>
-    const _supabase = supabase.createClient('https://onozvyuowebbwuvcqlzt.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0');
+    <!-- 4. CHANGE/UPDATE PASSWORD FORM -->
+    <div id="update-password-view" class="auth-view hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-bold tracking-tight text-white">Choose New Password</h2>
+        <p class="text-sm text-slate-400 mt-1">Make sure it's secure and memorable</p>
+      </div>
 
-    function updateClock() {
-        document.getElementById('timestamp').value = new Date().toLocaleString('en-PH');
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
+      <form id="update-password-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">New Password</label>
+          <input type="password" id="new-password" required class="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600" placeholder="••••••••">
+        </div>
+        <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-3 rounded-xl transition-all duration-150 cursor-pointer">Update Password</button>
+      </form>
+    </div>
 
-    async function loadCategories() {
-        const { data } = await _supabase.from('inbound_logs').select('category');
-        if (data) {
-            const uniqueCats = [...new Set(data.map(item => item.category))];
-            const list = document.getElementById('category-list');
-            list.innerHTML = '';
-            uniqueCats.forEach(cat => {
-                if(cat) {
-                    let option = document.createElement('option');
-                    option.value = cat;
-                    list.appendChild(option);
-                }
-            });
-        }
-    }
+  </div>
 
-    async function fetchLogs() {
-        const { data, error } = await _supabase
-            .from('inbound_logs')
-            .select('*')
-            .order('created_at', { ascending: false });
+  <!-- App Business Logic Core -->
+  <script>
+    const SUPABASE_URL = "https://onozvyuowebbwuvcqlzt.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0";
+    
+    window.supabaseAuthClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        if (data) {
-            const tableBody = document.getElementById('log-table-body');
-            tableBody.innerHTML = '';
-            data.forEach(log => {
-                const date = new Date(log.created_at).toLocaleString('en-PH');
-                tableBody.innerHTML += `
-                    <tr>
-                        <td>${date}</td>
-                        <td>${log.category}</td>
-                        <td>${log.project_name}</td>
-                        <td>${log.assigned_to}</td>
-                        <td>${log.logged_by}</td>
-                        <td><span class="status-tag">${log.status || 'Pending'}</span></td>
-                    </tr>
-                `;
-            });
-            loadCategories();
-        }
+    // Dynamic clean helper to retrieve absolute URL path directory structure
+    function getCleanBaseDirectory() {
+      return window.location.origin + window.location.pathname.replace(/[^\/]*$/, '');
     }
 
-    async function submitInboundLog() {
-        const category = document.getElementById('category').value;
-        const project = document.getElementById('project_name').value;
-        const assigned = document.getElementById('assigned_to').value;
-        const logged = document.getElementById('logged_by').value;
-
-        if (!category || !project || !assigned) {
-            alert("Please fill in Category, Project, and Assignee!");
-            return;
-        }
-
-        const { error } = await _supabase.from('inbound_logs').insert([{
-            category: category,
-            project_name: project,
-            assigned_to: assigned,
-            logged_by: logged,
-            status: 'Pending' // Explicitly setting status here
-        }]);
-
-        if (error) {
-            alert("Database Error: " + error.message);
-        } else {
-            // Success - Clear fields except for Logged By
-            document.getElementById('category').value = '';
-            document.getElementById('project_name').value = '';
-            document.getElementById('assigned_to').value = '';
-            fetchLogs(); 
-        }
+    function switchView(viewId) {
+      document.querySelectorAll('.auth-view').forEach(view => view.classList.add('hidden'));
+      document.getElementById(viewId).classList.remove('hidden');
+      hideToast();
     }
 
-    fetchLogs();
-</script>
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.innerText = message;
+      toast.className = `p-3 rounded-lg text-sm font-medium text-center block ${isError ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`;
+    }
+
+    function hideToast() {
+      document.getElementById('toast').classList.add('hidden');
+    }
+
+    // --- Action Listeners ---
+
+    // 1. Sign Up Handler
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+
+      const { data, error } = await window.supabaseAuthClient.auth.signUp({ email, password });
+      if (error) return showToast(error.message, true);
+      
+      showToast("Registration successful! Check your email inbox to confirm registration.");
+    });
+
+    // 2. Sign In Handler
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      const { data, error } = await window.supabaseAuthClient.auth.signInWithPassword({ email, password });
+      if (error) return showToast(error.message, true);
+
+      showToast("Logged in successfully! Redirecting...");
+      setTimeout(() => {
+        window.location.href = getCleanBaseDirectory() + "dashboard.html";
+      }, 1000);
+    });
+
+    // 3. GitHub OAuth Handler
+    document.getElementById('github-btn').addEventListener('click', async () => {
+      const { data, error } = await window.supabaseAuthClient.auth.signInWithOAuth({
+        provider: 'github',
+        options: { redirectTo: getCleanBaseDirectory() + "dashboard.html" }
+      });
+      if (error) showToast(error.message, true);
+    });
+
+    // 4. Google OAuth Handler
+    document.getElementById('google-btn').addEventListener('click', async () => {
+      const { data, error } = await window.supabaseAuthClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: { 
+          redirectTo: getCleanBaseDirectory() + "dashboard.html",
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        }
+      });
+      if (error) showToast(error.message, true);
+    });
+
+    // 5. Send Forgot Password Reset Request Handler
+    document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('forgot-email').value;
+
+      const { data, error } = await window.supabaseAuthClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname + '?type=recovery',
+      });
+      if (error) return showToast(error.message, true);
+
+      showToast("Reset link dispatched! Please check your spam or inbox folders.");
+    });
+
+    // 6. Update Password Form Submission Handler
+    document.getElementById('update-password-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newPassword = document.getElementById('new-password').value;
+
+      const { data, error } = await window.supabaseAuthClient.auth.updateUser({ password: newPassword });
+      if (error) return showToast(error.message, true);
+
+      showToast("Password updated! Accessing workspace dashboard...");
+      setTimeout(() => {
+        window.location.href = getCleanBaseDirectory() + "dashboard.html";
+      }, 1500);
+    });
+
+    // 7. Access Token Callback Routing Check
+    window.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      if (urlParams.get('type') === 'recovery' || window.location.hash.includes('type=recovery')) {
+        switchView('update-password-view');
+        return;
+      }
+
+      const { data: { session } } = await window.supabaseAuthClient.auth.getSession();
+      if (session) {
+        window.location.href = getCleanBaseDirectory() + "dashboard.html";
+      }
+    });
+  </script>
 </body>
 </html>
