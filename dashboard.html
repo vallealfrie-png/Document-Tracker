@@ -320,15 +320,37 @@
     let currentView = 'live'; 
     let audioEnabled = false;
     let currentUserDept = null; 
+    let reloadTimeout = null;
+
+    // Helper: Safely format dates to avoid browser runtime crashes on null or bad timestamps
+    function formatDate(dateString, formatOptions = {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) {
+        if (!dateString) return '---';
+        try {
+            const parsed = new Date(dateString);
+            return isNaN(parsed.getTime()) ? '---' : parsed.toLocaleString('en-PH', formatOptions);
+        } catch {
+            return '---';
+        }
+    }
+
+    // Helper: Throttles dashboard reloads so rapid realtime updates don't spam requests
+    function debouncedReload() {
+        if (reloadTimeout) clearTimeout(reloadTimeout);
+        reloadTimeout = setTimeout(() => {
+            loadDashboard();
+        }, 300);
+    }
 
     function enableAudio() {
         audioEnabled = true;
         const statusBanner = document.getElementById('sound-status');
-        statusBanner.innerHTML = "✅ REAL-TIME AUDIO ALERTS ACTIVE";
-        statusBanner.style.background = "rgba(57, 255, 20, 0.1)";
-        statusBanner.style.borderColor = "var(--success)";
-        statusBanner.style.color = "var(--success)";
-        statusBanner.style.textShadow = "0 0 5px rgba(57, 255, 20, 0.3)";
+        if (statusBanner) {
+            statusBanner.innerHTML = "✅ REAL-TIME AUDIO ALERTS ACTIVE";
+            statusBanner.style.background = "rgba(57, 255, 20, 0.1)";
+            statusBanner.style.borderColor = "var(--success)";
+            statusBanner.style.color = "var(--success)";
+            statusBanner.style.textShadow = "0 0 5px rgba(57, 255, 20, 0.3)";
+        }
     }
 
     function showView(view) {
@@ -341,7 +363,12 @@
             else activeBtn.classList.add('active');
         }
 
-        document.getElementById('page-title').innerText = view.charAt(0).toUpperCase() + view.slice(1) + " View";
+        const titleText = view.charAt(0).toUpperCase() + view.slice(1);
+        document.getElementById('page-title').innerText = `${titleText} View`;
+        document.getElementById('table-title').innerText = 
+            view === 'live' ? 'Current Active Documents' : 
+            view === 'inbound' ? 'Inbound Documents Log' : 'Archived Documents';
+
         loadDashboard();
     }
 
@@ -372,10 +399,14 @@
         scanBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:35px; color: var(--text-muted);">Syncing secure databases...</td></tr>';
 
         try {
-            const { count: finCount } = await _supabase.from('finished_documents').select('*', { count: 'exact', head: true });
-            const { count: inCount } = await _supabase.from('inbound_logs').select('*', { count: 'exact', head: true });
-            document.getElementById('count-finished').innerText = finCount || 0;
-            document.getElementById('count-inbound').innerText = inCount || 0;
+            // Parallel execution for fast KPI metrics loading
+            const [finishedRes, inboundRes] = await Promise.all([
+                _supabase.from('finished_documents').select('*', { count: 'exact', head: true }),
+                _supabase.from('inbound_logs').select('*', { count: 'exact', head: true })
+            ]);
+
+            document.getElementById('count-finished').innerText = finishedRes.count || 0;
+            document.getElementById('count-inbound').innerText = inboundRes.count || 0;
 
             if (currentView === 'live') {
                 headRow.innerHTML = `<th>Last Action</th><th>Document details</th><th>Department</th><th>Active Handler</th><th>Status</th>`;
@@ -425,7 +456,7 @@
                     row.className = 'doc-row';
                     row.onclick = () => toggleHistory(qr);
                     row.innerHTML = `
-                        <td style="color: var(--neon); font-weight: 600;">${new Date(latest.created_at).toLocaleString('en-PH', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
+                        <td style="color: var(--neon); font-weight: 600;">${formatDate(latest.created_at)}</td>
                         <td><strong>${pName}</strong><br><small style="color: var(--text-muted); font-family: monospace;">${qr}</small></td>
                         <td><b style="color: var(--text-light);">${latest.department || '---'}</b></td>
                         <td>${latest.status === 'Picked Up' ? (latest.picked_up_by || '---') : (latest.received_by || '---')}</td>
@@ -434,7 +465,7 @@
                     const hRow = document.createElement('tr');
                     hRow.id = `history-${qr}`;
                     hRow.className = 'history-row';
-                    hRow.onclick = (e) => e.stopPropagation(); // Stop collapsing panel when clicking on spacing
+                    hRow.onclick = (e) => e.stopPropagation(); 
                     hRow.innerHTML = `
                         <td colspan="5">
                             <div class="history-container">
@@ -443,7 +474,7 @@
                                 <table style="width:100%; background: rgba(0,0,0,0.3); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
                                     ${history.map(h => `
                                         <tr>
-                                            <td style="border-bottom: 1px solid rgba(255,255,255,0.02);">${new Date(h.created_at).toLocaleString()}</td>
+                                            <td style="border-bottom: 1px solid rgba(255,255,255,0.02);">${formatDate(h.created_at, {month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
                                             <td style="border-bottom: 1px solid rgba(255,255,255,0.02);"><strong>${h.status}</strong> at ${h.department}</td>
                                             <td style="border-bottom: 1px solid rgba(255,255,255,0.02); color: var(--text-muted);">By: ${h.status==='Picked Up'? (h.picked_up_by || '---') : (h.received_by || '---')}</td>
                                         </tr>`).join('')}
@@ -470,7 +501,7 @@
                 inbounds.forEach(log => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td style="color: var(--neon);">${new Date(log.created_at).toLocaleString()}</td>
+                        <td style="color: var(--neon);">${formatDate(log.created_at, {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
                         <td><small style="text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">${log.category || '---'}</small></td>
                         <td><strong>${log.project_name || '---'}</strong></td>
                         <td>${log.assigned_to || '---'}</td>
@@ -492,7 +523,7 @@
                 finished.forEach(f => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td style="color: var(--success);">${new Date(f.completed_at).toLocaleString()}</td>
+                        <td style="color: var(--success);">${formatDate(f.completed_at, {month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
                         <td><strong>${f.project_name || '---'}</strong><br><small style="font-family: monospace; color: var(--text-muted);">${f.qr_code}</small></td>
                         <td>${f.approved_by || '---'}</td>
                         <td>${f.final_department || '---'}</td>
@@ -510,7 +541,6 @@
         const approver = prompt(`Final Approval: ${name}\nEnter your name:`);
         if (!approver) return;
 
-        // Correctly inserting final_department to keep our dashboard columns populated on Archive
         const { error: err1 } = await _supabase.from('finished_documents').insert([{
             qr_code: qr, project_name: name, approved_by: approver, final_department: finalDept
         }]);
@@ -543,6 +573,7 @@
         return 'status-finished';
     }
 
+    let toastTimer = null;
     function triggerAlert(msg) {
         const toast = document.getElementById('notification-toast');
         const toastMsg = document.getElementById('toast-msg');
@@ -550,8 +581,15 @@
 
         toastMsg.innerText = msg;
         toast.style.display = 'block';
-        if (audioEnabled) document.getElementById('notif-sound').play().catch(() => {});
-        setTimeout(() => { toast.style.display = 'none'; }, 8000);
+        if (audioEnabled) {
+            const player = document.getElementById('notif-sound');
+            if (player) {
+                player.currentTime = 0;
+                player.play().catch(e => console.log("Audio playback blocked:", e));
+            }
+        }
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toast.style.display = 'none'; }, 8000);
     }
 
     // Initialize session and real-time listeners
@@ -574,18 +612,17 @@
             { event: 'INSERT', schema: 'public', table: 'document_notifications' }, 
             (payload) => { 
                 triggerAlert(payload.new.message); 
-                loadDashboard(); 
+                debouncedReload(); 
             }
         ).subscribe();
         
         _supabase.channel('inbound-updates').on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'inbound_logs' }, 
             (payload) => { 
-                // Only alert on logs if they match the user's filtered department or if user sees all
                 if (!currentUserDept || payload.new.department === currentUserDept) {
                     triggerAlert("New Inbound Document Logged!");
                 }
-                loadDashboard(); 
+                debouncedReload(); 
             }
         ).subscribe();
     }
