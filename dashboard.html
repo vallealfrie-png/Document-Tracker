@@ -2,69 +2,250 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PHMC Document Control Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHMC Document Control - Live Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #1a73ba; --secondary: #d9534f; --success: #28a745; --inbound: #6f42c1; --bg: #f0f2f5; --dark: #343a40; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .dashboard-container { max-width: 1400px; margin: auto; }
+        :root {
+            --neon: #0ef;
+            --neon-hover: #0bc2cc;
+            --bg-dark: #081b29;
+            --panel-bg: rgba(8, 27, 41, 0.65);
+            --border-glow: rgba(0, 238, 255, 0.2);
+            --text-light: #ededed;
+            --text-muted: #a2bccc;
+            --success: #39ff14; /* Neon Green */
+            --inbound: #bd00ff; /* Neon Purple */
+            --warning: #ffb700; /* Neon Orange */
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         
+        body { 
+            background: var(--bg-dark); 
+            color: var(--text-light);
+            min-height: 100vh;
+            padding: 30px 20px;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container { 
+            max-width: 1400px; 
+            margin: auto; 
+        }
+
+        /* Glassmorphic Cyberpunk Header */
         .header-flex { 
-            display: flex; align-items: center; justify-content: space-between; 
-            margin-bottom: 25px; background: white; padding: 15px 25px; 
-            border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            margin-bottom: 25px; 
+            background: var(--panel-bg); 
+            padding: 15px 25px; 
+            border-radius: 12px; 
+            border: 1px solid var(--border-glow);
+            box-shadow: 0 0 15px rgba(0, 238, 255, 0.1);
         }
         
-        .nav-links { display: flex; gap: 8px; align-items: center; }
+        .header-title-area {
+            display: flex; 
+            align-items: center; 
+            gap: 15px;
+        }
+        .header-title-area img {
+            height: 45px;
+            filter: drop-shadow(0 0 5px var(--neon));
+        }
+        .header-title-area h1 {
+            color: var(--text-light);
+            text-shadow: 0 0 8px var(--neon);
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+
+        /* Modern Navigation Buttons */
+        .nav-links { display: flex; gap: 10px; align-items: center; }
         .nav-btn {
-            display: flex; align-items: center; gap: 8px; text-decoration: none;
-            color: #666; font-size: 0.8rem; font-weight: 600; padding: 10px 14px;
-            border-radius: 8px; border: 1px solid #eee; transition: all 0.3s ease;
-            cursor: pointer; text-transform: uppercase;
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            text-decoration: none;
+            color: var(--text-muted); 
+            font-size: 0.8rem; 
+            font-weight: 700; 
+            padding: 10px 16px;
+            border-radius: 8px; 
+            border: 1px solid var(--border-glow); 
+            background: rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer; 
+            text-transform: uppercase;
             user-select: none;
         }
-        .nav-btn:hover, .nav-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-        .nav-btn.inbound-active { background: var(--inbound); color: white; border-color: var(--inbound); }
+        .nav-btn:hover, .nav-btn.active { 
+            background: var(--neon); 
+            color: var(--bg-dark); 
+            border-color: var(--neon);
+            box-shadow: 0 0 12px var(--neon);
+        }
+        .nav-btn.inbound-active { 
+            background: var(--inbound); 
+            color: white; 
+            border-color: var(--inbound);
+            box-shadow: 0 0 12px var(--inbound);
+        }
         
-        /* Logout Button Custom Styling */
-        .nav-btn.btn-logout { border-color: #f5c6cb; color: var(--secondary); }
-        .nav-btn.btn-logout:hover { background: var(--secondary); color: white; border-color: var(--secondary); }
-
-        .btn-finish { 
-            background: var(--success); color: white; border: none; padding: 8px 15px; 
-            border-radius: 5px; cursor: pointer; font-weight: bold; float: right; 
+        /* Logout Button Styles */
+        .nav-btn.btn-logout { 
+            border-color: rgba(217, 83, 79, 0.4); 
+            color: #ff4d4d; 
+        }
+        .nav-btn.btn-logout:hover { 
+            background: #ff4d4d; 
+            color: white; 
+            border-color: #ff4d4d;
+            box-shadow: 0 0 12px #ff4d4d;
         }
 
+        /* Sound Activation Banner */
+        #sound-status { 
+            cursor: pointer; 
+            padding: 14px; 
+            background: rgba(255, 183, 0, 0.1); 
+            text-align: center; 
+            border-radius: 8px; 
+            margin-bottom: 25px; 
+            font-weight: bold; 
+            border: 1px dashed var(--warning); 
+            color: var(--warning);
+            transition: 0.3s;
+            text-shadow: 0 0 5px rgba(255, 183, 0, 0.3);
+        }
+        #sound-status:hover {
+            background: rgba(255, 183, 0, 0.2);
+            box-shadow: 0 0 10px rgba(255, 183, 0, 0.2);
+        }
+
+        /* Metrics Display Grid */
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); }
-        .stat-card h3 { margin: 0; font-size: 0.8rem; color: #888; text-transform: uppercase; }
-        .stat-card p { margin: 10px 0 0; font-size: 1.8rem; font-weight: bold; color: #333; }
+        .stat-card { 
+            background: var(--panel-bg); 
+            padding: 22px; 
+            border-radius: 12px; 
+            border: 1px solid var(--border-glow);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+            border-left: 5px solid var(--neon); 
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px var(--border-glow);
+        }
+        .stat-card h3 { margin: 0; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .stat-card p { margin: 10px 0 0; font-size: 2.2rem; font-weight: 800; color: var(--text-light); text-shadow: 0 0 8px rgba(255,255,255,0.1); }
 
-        #sound-status { cursor: pointer; padding: 12px; background: #fff3cd; text-align: center; border-radius: 8px; margin-bottom: 20px; font-weight: bold; border: 2px dashed #f39c12; }
-
-        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
-        .status-signed { background: #d4edda; color: #155724; }
-        .status-received { background: #cce5ff; color: #004085; }
-        .status-inbound { background: #eef6ff; color: var(--inbound); border: 1px solid var(--inbound); }
-        .status-finished { background: var(--dark); color: white; }
-
-        .table-container { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .table-header { padding: 15px 20px; background: #fff; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        /* Neon Table Container */
+        .table-container { 
+            background: var(--panel-bg); 
+            border-radius: 12px; 
+            overflow: hidden; 
+            border: 1px solid var(--border-glow);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3); 
+            margin-bottom: 30px; 
+        }
+        .table-header { 
+            padding: 20px 25px; 
+            background: rgba(0, 0, 0, 0.2); 
+            border-bottom: 1px solid var(--border-glow); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .table-header h2 {
+            font-size: 1.3rem;
+            color: var(--text-light);
+            text-shadow: 0 0 8px var(--neon);
+        }
         
         table { width: 100%; border-collapse: collapse; }
-        th { background: #f8f9fa; color: #666; padding: 12px 20px; text-align: left; font-size: 0.75rem; text-transform: uppercase; }
-        td { padding: 12px 20px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-        
-        .doc-row:hover { background: #f9f9f9; cursor: pointer; }
-        .history-row { display: none; background: #f8f9fa; }
-        .history-container { padding: 20px 40px; border-left: 10px solid var(--primary); }
-
-        #notification-toast {
-            position: fixed; top: 20px; right: 20px; background: #222; color: white;
-            padding: 20px; border-radius: 12px; display: none; z-index: 1000;
-            min-width: 300px; animation: slideIn 0.4s ease-out;
+        th { 
+            background: rgba(0, 0, 0, 0.3); 
+            color: var(--neon); 
+            padding: 15px 20px; 
+            text-align: left; 
+            font-size: 0.75rem; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            border-bottom: 1px solid var(--border-glow);
         }
-        @keyframes slideIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
+        td { 
+            padding: 15px 20px; 
+            border-bottom: 1px solid rgba(0, 238, 255, 0.08); 
+            font-size: 0.9rem; 
+            color: var(--text-light);
+        }
+        
+        .doc-row { transition: background 0.2s ease; }
+        .doc-row:hover { background: rgba(0, 238, 255, 0.05); cursor: pointer; }
+        
+        /* Expandable History Layout */
+        .history-row { display: none; background: rgba(0,0,0,0.4); }
+        .history-container { 
+            padding: 25px 40px; 
+            border-left: 5px solid var(--neon); 
+            background: rgba(8, 27, 41, 0.9);
+        }
+
+        .btn-finish { 
+            background: var(--success); 
+            color: var(--bg-dark); 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 800; 
+            float: right; 
+            box-shadow: 0 0 10px var(--success);
+            transition: 0.3s;
+        }
+        .btn-finish:hover {
+            background: #2ee610;
+            box-shadow: 0 0 18px var(--success);
+        }
+
+        /* Status Pill Badges */
+        .status-badge { 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            font-size: 0.75rem; 
+            font-weight: 800; 
+            display: inline-block; 
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .status-signed { background: rgba(57, 255, 20, 0.15); color: var(--success); border: 1px solid var(--success); box-shadow: 0 0 8px rgba(57, 255, 20, 0.1); }
+        .status-received { background: rgba(0, 238, 255, 0.15); color: var(--neon); border: 1px solid var(--neon); box-shadow: 0 0 8px rgba(0, 238, 255, 0.1); }
+        .status-pickup { background: rgba(255, 183, 0, 0.15); color: var(--warning); border: 1px solid var(--warning); box-shadow: 0 0 8px rgba(255, 183, 0, 0.1); }
+        .status-inbound { background: rgba(189, 0, 255, 0.15); color: #d666ff; border: 1px solid var(--inbound); box-shadow: 0 0 8px rgba(189, 0, 255, 0.1); }
+        .status-finished { background: rgba(237, 237, 237, 0.1); color: var(--text-light); border: 1px solid var(--text-light); }
+
+        /* Real-time Cyberpunk Toast Notification */
+        #notification-toast {
+            position: fixed; 
+            bottom: 30px; 
+            right: 30px; 
+            background: var(--bg-dark); 
+            color: var(--text-light);
+            padding: 20px; 
+            border-radius: 12px; 
+            display: none; 
+            z-index: 1000;
+            min-width: 320px; 
+            border: 2px solid var(--neon);
+            box-shadow: 0 0 20px var(--neon);
+            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes slideIn { from { transform: translateY(120%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -72,10 +253,12 @@
 <audio id="notif-sound" src="https://raw.githubusercontent.com/vallealfrie-png/Document-Tracker/main/mixkit-urgent-simple-tone-loop-2976.wav" preload="auto"></audio>
 
 <div class="dashboard-container">
+    
+    <!-- HEADER -->
     <div class="header-flex">
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <img src="https://i.imgur.com/VbZKWAf.png" alt="Logo" style="height: 40px;">
-            <h1 id="page-title" style="color: #333; margin: 0; font-size: 1.5rem;">Live Tracking View</h1>
+        <div class="header-title-area">
+            <img src="https://i.imgur.com/VbZKWAf.png" alt="PHMC Logo">
+            <h1 id="page-title">Live Tracking View</h1>
         </div>
         
         <div class="nav-links">
@@ -88,27 +271,48 @@
         </div>
     </div>
 
-    <div id="sound-status" onclick="enableAudio()">🔊 Click to ACTIVATE Alert Sounds</div>
+    <!-- AUDIO TOGGLE BANNER -->
+    <div id="sound-status" onclick="enableAudio()">🔊 CLICK TO ENABLE REAL-TIME MONITORING SOUNDS</div>
 
+    <!-- METRICS GRID -->
     <div class="stats-grid">
-        <div class="stat-card"><h3>QR Active</h3><p id="count-active">0</p></div>
-        <div class="stat-card" style="border-left-color: var(--inbound);"><h3>Inbound (Pending)</h3><p id="count-inbound">0</p></div>
-        <div class="stat-card" style="border-left-color: var(--success);"><h3>Archived</h3><p id="count-finished">0</p></div>
-        <div class="stat-card"><h3>System</h3><p style="font-size: 1rem; color: var(--success);">● LIVE</p></div>
+        <div class="stat-card">
+            <h3>QR Active</h3>
+            <p id="count-active">0</p>
+        </div>
+        <div class="stat-card" style="border-left-color: var(--inbound);">
+            <h3>Inbound (Pending)</h3>
+            <p id="count-inbound">0</p>
+        </div>
+        <div class="stat-card" style="border-left-color: var(--success);">
+            <h3>Archived</h3>
+            <p id="count-finished">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>System</h3>
+            <p style="font-size: 1.1rem; color: var(--success); text-shadow: 0 0 10px rgba(57, 255, 20, 0.3);">● REALTIME ONLINE</p>
+        </div>
     </div>
 
+    <!-- MAIN DATA TABLE -->
     <div class="table-container">
         <div class="table-header">
             <h2 id="table-title">Current Active Documents</h2>
         </div>
         <table>
-            <thead><tr id="table-head-row"></tr></thead>
+            <thead>
+                <tr id="table-head-row"></tr>
+            </thead>
             <tbody id="scan-body"></tbody>
         </table>
     </div>
 </div>
 
-<div id="notification-toast"><div id="toast-msg"></div></div>
+<!-- FLOATING NOTIFICATION TOAST -->
+<div id="notification-toast">
+    <div style="font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--neon); margin-bottom: 8px; letter-spacing: 1px;">System Alert</div>
+    <div id="toast-msg" style="font-size: 0.9rem; line-height: 1.4;"></div>
+</div>
 
 <script>
     const _supabase = supabase.createClient('https://onozvyuowebbwuvcqlzt.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0');
@@ -119,8 +323,12 @@
 
     function enableAudio() {
         audioEnabled = true;
-        document.getElementById('sound-status').innerHTML = "✅ Alert Sounds Enabled";
-        document.getElementById('sound-status').style.background = "#d4edda";
+        const statusBanner = document.getElementById('sound-status');
+        statusBanner.innerHTML = "✅ REAL-TIME AUDIO ALERTS ACTIVE";
+        statusBanner.style.background = "rgba(57, 255, 20, 0.1)";
+        statusBanner.style.borderColor = "var(--success)";
+        statusBanner.style.color = "var(--success)";
+        statusBanner.style.textShadow = "0 0 5px rgba(57, 255, 20, 0.3)";
     }
 
     function showView(view) {
@@ -161,7 +369,7 @@
         const headRow = document.getElementById('table-head-row');
         if (!scanBody || !headRow) return;
 
-        scanBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Fetching latest data...</td></tr>';
+        scanBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:35px; color: var(--text-muted);">Syncing secure databases...</td></tr>';
 
         try {
             const { count: finCount } = await _supabase.from('finished_documents').select('*', { count: 'exact', head: true });
@@ -170,7 +378,7 @@
             document.getElementById('count-inbound').innerText = inCount || 0;
 
             if (currentView === 'live') {
-                headRow.innerHTML = `<th>Update</th><th>Document</th><th>Dept</th><th>Handler</th><th>Status</th>`;
+                headRow.innerHTML = `<th>Last Action</th><th>Document details</th><th>Department</th><th>Active Handler</th><th>Status</th>`;
                 
                 let scansQuery = _supabase.from('document_tracking_events').select('*').order('created_at', { ascending: false });
                 scansQuery = applyDepartmentFilter(scansQuery, 'department');
@@ -203,7 +411,7 @@
                 scanBody.innerHTML = '';
 
                 if(sortedActiveDocs.length === 0) {
-                    scanBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No active tracked documents found.</td></tr>';
+                    scanBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:35px; color: var(--text-muted);">No active tracked documents found.</td></tr>';
                     return;
                 }
 
@@ -217,9 +425,9 @@
                     row.className = 'doc-row';
                     row.onclick = () => toggleHistory(qr);
                     row.innerHTML = `
-                        <td>${new Date(latest.created_at).toLocaleString('en-PH', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
-                        <td><strong>${pName}</strong><br><small>${qr}</small></td>
-                        <td><b style="color:var(--primary)">${latest.department || '---'}</b></td>
+                        <td style="color: var(--neon); font-weight: 600;">${new Date(latest.created_at).toLocaleString('en-PH', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
+                        <td><strong>${pName}</strong><br><small style="color: var(--text-muted); font-family: monospace;">${qr}</small></td>
+                        <td><b style="color: var(--text-light);">${latest.department || '---'}</b></td>
                         <td>${latest.status === 'Picked Up' ? (latest.picked_up_by || '---') : (latest.received_by || '---')}</td>
                         <td><span class="status-badge ${getStatusClass(latest.status)}">${latest.status || 'Unknown'}</span></td>`;
                     
@@ -230,9 +438,14 @@
                         <td colspan="5">
                             <div class="history-container">
                                 <button class="btn-finish" onclick="approveDocument('${qr}', '${pName}')">FINISH & ARCHIVE</button>
-                                <h4 style="margin-top:0">Full Routing History</h4>
-                                <table style="width:100%; background:white; border-radius:4px;">
-                                    ${history.map(h => `<tr><td>${new Date(h.created_at).toLocaleString()}</td><td>${h.status} at ${h.department}</td><td>By: ${h.status==='Picked Up'? (h.picked_up_by || '---') : (h.received_by || '---')}</td></tr>`).join('')}
+                                <h4 style="margin-top:0; margin-bottom: 15px; color: var(--neon); font-size: 0.95rem; text-shadow: 0 0 5px rgba(0,238,255,0.3);">Full Routing History</h4>
+                                <table style="width:100%; background: rgba(0,0,0,0.3); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                                    ${history.map(h => `
+                                        <tr>
+                                            <td style="border-bottom: 1px solid rgba(255,255,255,0.02);">${new Date(h.created_at).toLocaleString()}</td>
+                                            <td style="border-bottom: 1px solid rgba(255,255,255,0.02);"><strong>${h.status}</strong> at ${h.department}</td>
+                                            <td style="border-bottom: 1px solid rgba(255,255,255,0.02); color: var(--text-muted);">By: ${h.status==='Picked Up'? (h.picked_up_by || '---') : (h.received_by || '---')}</td>
+                                        </tr>`).join('')}
                                 </table>
                             </div>
                         </td>`;
@@ -249,15 +462,15 @@
                 
                 scanBody.innerHTML = '';
                 if(!inbounds || inbounds.length === 0) {
-                    scanBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">No inbound records logged.</td></tr>';
+                    scanBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:35px; color: var(--text-muted);">No inbound records logged.</td></tr>';
                     return;
                 }
 
                 inbounds.forEach(log => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${new Date(log.created_at).toLocaleString()}</td>
-                        <td><small>${log.category || '---'}</small></td>
+                        <td style="color: var(--neon);">${new Date(log.created_at).toLocaleString()}</td>
+                        <td><small style="text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">${log.category || '---'}</small></td>
                         <td><strong>${log.project_name || '---'}</strong></td>
                         <td>${log.assigned_to || '---'}</td>
                         <td>${log.logged_by || '---'}</td>
@@ -271,15 +484,15 @@
                 
                 scanBody.innerHTML = '';
                 if(!finished || finished.length === 0) {
-                    scanBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No archived items found.</td></tr>';
+                    scanBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:35px; color: var(--text-muted);">No archived items found.</td></tr>';
                     return;
                 }
 
                 finished.forEach(f => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${new Date(f.completed_at).toLocaleString()}</td>
-                        <td><strong>${f.project_name || '---'}</strong><br><small>${f.qr_code}</small></td>
+                        <td style="color: var(--success);">${new Date(f.completed_at).toLocaleString()}</td>
+                        <td><strong>${f.project_name || '---'}</strong><br><small style="font-family: monospace; color: var(--text-muted);">${f.qr_code}</small></td>
                         <td>${f.approved_by || '---'}</td>
                         <td>${f.final_department || '---'}</td>
                         <td><span class="status-badge status-finished">ARCHIVED</span></td>`;
@@ -288,7 +501,7 @@
             }
         } catch (err) {
             console.error("Dashboard Error Encountered:", err);
-            scanBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red; padding:20px;">Failed to process live logs: ${err.message}</td></tr>`;
+            scanBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#ff4d4d; padding:35px;">Failed to process live logs: ${err.message}</td></tr>`;
         }
     }
 
@@ -325,7 +538,7 @@
         if (s.includes('signed') && !s.includes('not')) return 'status-signed';
         if (s.includes('received')) return 'status-received';
         if (s.includes('picked up')) return 'status-pickup';
-        return '';
+        return 'status-finished';
     }
 
     function triggerAlert(msg) {
@@ -337,6 +550,22 @@
         toast.style.display = 'block';
         if (audioEnabled) document.getElementById('notif-sound').play().catch(() => {});
         setTimeout(() => { toast.style.display = 'none'; }, 8000);
+    }
+
+    // Initialize session and real-time listeners
+    async function initializeSessionAndRealtime() {
+        // Securely fetch department metadata from authenticated profile
+        try {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (user && user.user_metadata) {
+                currentUserDept = user.user_metadata.department || null;
+            }
+        } catch (e) {
+            console.warn("User profile fetch skipped:", e);
+        }
+
+        loadDashboard();
+        startListener();
     }
 
     function startListener() {
@@ -351,10 +580,7 @@
         ).subscribe();
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        loadDashboard();
-        startListener();
-    });
+    document.addEventListener('DOMContentLoaded', initializeSessionAndRealtime);
 </script>
 </body>
 </html>
