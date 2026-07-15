@@ -133,8 +133,18 @@
             font-size: 0.85rem; 
             color: var(--text-light);
         }
-        tr.data-row { transition: background 0.2s; }
-        tr.data-row:hover { background: rgba(0, 238, 255, 0.03); }
+        
+        /* Interactive Row Styling */
+        tr.data-row { 
+            transition: background 0.2s; 
+            cursor: pointer;
+        }
+        tr.data-row:hover { 
+            background: rgba(0, 238, 255, 0.05); 
+        }
+        tr.data-row.expanded {
+            background: rgba(0, 238, 255, 0.02);
+        }
 
         /* Status Pill Colors */
         .badge { 
@@ -149,6 +159,88 @@
         .badge-pickup { background: rgba(255, 183, 0, 0.1); color: var(--neon-orange); border: 1px solid var(--neon-orange); }
         .badge-signed { background: rgba(57, 255, 20, 0.1); color: var(--neon-green); border: 1px solid var(--neon-green); }
         .badge-archive { background: rgba(189, 0, 255, 0.1); color: #d666ff; border: 1px solid var(--neon-purple); }
+
+        /* Collapse / Expand Elements */
+        .history-row {
+            display: none;
+            background: rgba(0, 0, 0, 0.4);
+        }
+        .history-row.show {
+            display: table-row;
+        }
+        .history-container {
+            padding: 20px 40px;
+            border-left: 3px solid var(--neon-blue);
+            margin: 10px 0;
+            background: rgba(0, 238, 255, 0.02);
+        }
+        .history-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+        }
+
+        /* Visual Timeline */
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 5px;
+            bottom: 5px;
+            width: 2px;
+            background: rgba(0, 238, 255, 0.15);
+        }
+        .timeline-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            position: relative;
+            font-size: 0.8rem;
+        }
+        .timeline-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--bg-dark);
+            border: 2px solid var(--neon-blue);
+            z-index: 1;
+            margin-top: 2px;
+            box-shadow: 0 0 6px var(--neon-blue);
+        }
+        .timeline-item.old-event .timeline-dot {
+            border-color: var(--text-muted);
+            box-shadow: none;
+        }
+        .timeline-content {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .timeline-time {
+            color: var(--neon-blue);
+            font-weight: 600;
+            min-width: 130px;
+        }
+        .timeline-item.old-event .timeline-time {
+            color: var(--text-muted);
+        }
+        .indicator-arrow {
+            display: inline-block;
+            transition: transform 0.2s ease;
+            color: var(--neon-blue);
+            font-weight: bold;
+        }
+        tr.expanded .indicator-arrow {
+            transform: rotate(90deg);
+        }
     </style>
 </head>
 <body>
@@ -178,6 +270,7 @@
         <table>
             <thead>
                 <tr>
+                    <th style="width: 40px;"></th>
                     <th>Last Movement Time</th>
                     <th>QR Code</th>
                     <th>Current Department Location</th>
@@ -187,7 +280,7 @@
             </thead>
             <tbody id="table-body">
                 <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">Initializing active tracks...</td>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Initializing active tracks...</td>
                 </tr>
             </tbody>
         </table>
@@ -216,7 +309,24 @@
         });
     }
 
-    // Handle view switches between Local Active and Archived
+    // Toggle row collapses
+    function toggleHistory(qrCode) {
+        const headerRow = document.getElementById(`row-master-${qrCode}`);
+        const detailRow = document.getElementById(`row-detail-${qrCode}`);
+        
+        if (headerRow && detailRow) {
+            const isShowing = detailRow.classList.contains('show');
+            if (isShowing) {
+                detailRow.classList.remove('show');
+                headerRow.classList.remove('expanded');
+            } else {
+                detailRow.classList.add('show');
+                headerRow.classList.add('expanded');
+            }
+        }
+    }
+
+    // Handle view switches
     function setView(viewName) {
         currentView = viewName;
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -234,13 +344,13 @@
         fetchTrackerData();
     }
 
-    // Main tracking queries
+    // Main tracking query
     async function fetchTrackerData() {
         const tbody = document.getElementById('table-body');
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">Scanning real-time transactions...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Scanning real-time transactions...</td></tr>';
 
         try {
-            // Fetch everything sorted by newest action first
+            // Fetch everything sorted by newest action first to build precise tracking timelines
             const { data: events, error } = await _supabase
                 .from('document_tracking_events')
                 .select('created_at, parent_qr_code, department, status, received_by, picked_up_by')
@@ -248,55 +358,71 @@
 
             if (error) throw error;
             if (!events || events.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No historical data found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">No historical data found.</td></tr>';
                 return;
             }
 
-            // Isolate the absolute latest state event per unique QR Code 
-            const latestPerQR = {};
+            // Group ALL events under their respective parent_qr_codes chronologically
+            const groupsByQR = {};
             events.forEach(event => {
                 const qr = event.parent_qr_code;
-                if (!latestPerQR[qr]) {
-                    latestPerQR[qr] = event;
+                if (!qr) return;
+                if (!groupsByQR[qr]) {
+                    groupsByQR[qr] = [];
                 }
+                groupsByQR[qr].push(event);
             });
 
-            const uniqueLatestEvents = Object.values(latestPerQR);
+            // Extract the latest event for primary table rows
+            const uniqueLatestEvents = [];
+            Object.keys(groupsByQR).forEach(qr => {
+                // Since our query was ordered newest first, the first item in each group array is the latest
+                const latestEvent = groupsByQR[qr][0];
+                uniqueLatestEvents.push({
+                    latest: latestEvent,
+                    history: groupsByQR[qr]
+                });
+            });
 
-            // Filter data strictly depending on active flow vs final archive status
-            let filteredEvents = [];
+            // Sort the primary rows so the documents with the newest overall transactions appear first
+            uniqueLatestEvents.sort((a, b) => new Date(b.latest.created_at) - new Date(a.latest.created_at));
+
+            // Filter primary items based on view context
+            let filteredGroups = [];
             if (currentView === 'active') {
-                filteredEvents = uniqueLatestEvents.filter(e => {
-                    const status = (e.status || '').toLowerCase();
+                filteredGroups = uniqueLatestEvents.filter(item => {
+                    const status = (item.latest.status || '').toLowerCase();
                     return !status.includes('finish') && !status.includes('approve') && !status.includes('archive');
                 });
             } else if (currentView === 'archived') {
-                filteredEvents = uniqueLatestEvents.filter(e => {
-                    const status = (e.status || '').toLowerCase();
+                filteredGroups = uniqueLatestEvents.filter(item => {
+                    const status = (item.latest.status || '').toLowerCase();
                     return status.includes('finish') || status.includes('approve') || status.includes('archive');
                 });
             }
 
             tbody.innerHTML = '';
 
-            if (filteredEvents.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No documents in "${currentView}" queue.</td></tr>`;
+            if (filteredGroups.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">No documents in "${currentView}" queue.</td></tr>`;
                 return;
             }
 
-            // Render table content
-            filteredEvents.forEach(item => {
-                const statusStr = (item.status || '').toLowerCase();
+            // Render interactive rows
+            filteredGroups.forEach(group => {
+                const mainItem = group.latest;
+                const qrCode = mainItem.parent_qr_code;
+                const statusStr = (mainItem.status || '').toLowerCase();
                 
                 // Determine the correct responsible handler
                 let handler = '---';
                 if (statusStr.includes('picked up')) {
-                    handler = item.picked_up_by || '---';
+                    handler = mainItem.picked_up_by || '---';
                 } else {
-                    handler = item.received_by || '---';
+                    handler = mainItem.received_by || '---';
                 }
 
-                // Color-code state changes accurately for quick inspection
+                // Color-code active state badges
                 let badgeClass = 'badge-received';
                 if (statusStr.includes('pick') || statusStr.includes('outgoing') || statusStr.includes('forward')) {
                     badgeClass = 'badge-pickup';
@@ -306,21 +432,61 @@
                     badgeClass = 'badge-archive';
                 }
 
-                const tr = document.createElement('tr');
-                tr.className = 'data-row';
-                tr.innerHTML = `
-                    <td style="color: var(--neon-blue); font-weight: 600;">${formatTime(item.created_at)}</td>
-                    <td style="font-family: monospace; letter-spacing: 0.5px;">${item.parent_qr_code || '---'}</td>
-                    <td><strong>${item.department || '---'}</strong></td>
-                    <td><span class="badge ${badgeClass}">${item.status || 'Unknown'}</span></td>
+                // Build the collapsed timeline HTML string
+                let timelineHTML = '';
+                group.history.forEach((histEvent, index) => {
+                    const isNewest = index === 0;
+                    const hStatus = (histEvent.status || '').toLowerCase();
+                    const hHandler = hStatus.includes('picked up') ? (histEvent.picked_up_by || '---') : (histEvent.received_by || '---');
+                    
+                    timelineHTML += `
+                        <div class="timeline-item ${isNewest ? '' : 'old-event'}">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-time">${formatTime(histEvent.created_at)}</span>
+                                <span style="color: var(--text-light); min-width: 180px;">📍 <strong>${histEvent.department || '---'}</strong></span>
+                                <span style="color: ${isNewest ? 'var(--neon-blue)' : 'var(--text-muted)'}; font-weight: 600; min-width: 140px;">${histEvent.status || 'Unknown'}</span>
+                                <span style="color: var(--text-muted);">By: ${hHandler}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Generate Master Tr row and corresponding Hidden history container row
+                const trMaster = document.createElement('tr');
+                trMaster.className = 'data-row';
+                trMaster.id = `row-master-${qrCode}`;
+                trMaster.onclick = () => toggleHistory(qrCode);
+                trMaster.innerHTML = `
+                    <td style="text-align: center;"><span class="indicator-arrow">▶</span></td>
+                    <td style="color: var(--neon-blue); font-weight: 600;">${formatTime(mainItem.created_at)}</td>
+                    <td style="font-family: monospace; letter-spacing: 0.5px;">${qrCode}</td>
+                    <td><strong>${mainItem.department || '---'}</strong></td>
+                    <td><span class="badge ${badgeClass}">${mainItem.status || 'Unknown'}</span></td>
                     <td>${handler}</td>
                 `;
-                tbody.appendChild(tr);
+
+                const trDetail = document.createElement('tr');
+                trDetail.className = 'history-row';
+                trDetail.id = `row-detail-${qrCode}`;
+                trDetail.innerHTML = `
+                    <td colspan="6">
+                        <div class="history-container">
+                            <div class="history-title">Document Audit Trail (Newest First)</div>
+                            <div class="timeline">
+                                ${timelineHTML}
+                            </div>
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(trMaster);
+                tbody.appendChild(trDetail);
             });
 
         } catch (err) {
             console.error("Fetch Error:", err);
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ff4d4d; padding: 30px;">Database communication error: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff4d4d; padding: 30px;">Database communication error: ${err.message}</td></tr>`;
         }
     }
 
