@@ -434,10 +434,11 @@
                     const hRow = document.createElement('tr');
                     hRow.id = `history-${qr}`;
                     hRow.className = 'history-row';
+                    hRow.onclick = (e) => e.stopPropagation(); // Stop collapsing panel when clicking on spacing
                     hRow.innerHTML = `
                         <td colspan="5">
                             <div class="history-container">
-                                <button class="btn-finish" onclick="approveDocument('${qr}', '${pName}')">FINISH & ARCHIVE</button>
+                                <button class="btn-finish" onclick="event.stopPropagation(); approveDocument('${qr}', '${pName}', '${latest.department || 'Unknown'}')">FINISH & ARCHIVE</button>
                                 <h4 style="margin-top:0; margin-bottom: 15px; color: var(--neon); font-size: 0.95rem; text-shadow: 0 0 5px rgba(0,238,255,0.3);">Full Routing History</h4>
                                 <table style="width:100%; background: rgba(0,0,0,0.3); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
                                     ${history.map(h => `
@@ -505,12 +506,13 @@
         }
     }
 
-    async function approveDocument(qr, name) {
+    async function approveDocument(qr, name, finalDept) {
         const approver = prompt(`Final Approval: ${name}\nEnter your name:`);
         if (!approver) return;
 
+        // Correctly inserting final_department to keep our dashboard columns populated on Archive
         const { error: err1 } = await _supabase.from('finished_documents').insert([{
-            qr_code: qr, project_name: name, approved_by: approver
+            qr_code: qr, project_name: name, approved_by: approver, final_department: finalDept
         }]);
         
         const { error: err2 } = await _supabase.from('document_tracking_events').insert([{
@@ -554,7 +556,6 @@
 
     // Initialize session and real-time listeners
     async function initializeSessionAndRealtime() {
-        // Securely fetch department metadata from authenticated profile
         try {
             const { data: { user } } = await _supabase.auth.getUser();
             if (user && user.user_metadata) {
@@ -571,12 +572,21 @@
     function startListener() {
         _supabase.channel('global-updates').on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'document_notifications' }, 
-            (payload) => { triggerAlert(payload.new.message); loadDashboard(); }
+            (payload) => { 
+                triggerAlert(payload.new.message); 
+                loadDashboard(); 
+            }
         ).subscribe();
         
         _supabase.channel('inbound-updates').on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'inbound_logs' }, 
-            () => { triggerAlert("New Inbound Document Logged!"); loadDashboard(); }
+            (payload) => { 
+                // Only alert on logs if they match the user's filtered department or if user sees all
+                if (!currentUserDept || payload.new.department === currentUserDept) {
+                    triggerAlert("New Inbound Document Logged!");
+                }
+                loadDashboard(); 
+            }
         ).subscribe();
     }
 
