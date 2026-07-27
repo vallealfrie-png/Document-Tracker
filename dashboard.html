@@ -272,6 +272,7 @@
                     <th style="width: 40px;"></th>
                     <th>Last Movement Time</th>
                     <th>QR Code</th>
+                    <th>Project Name</th>
                     <th>Current Department Location</th>
                     <th>Transition Status</th>
                     <th>Handled By</th>
@@ -279,7 +280,7 @@
             </thead>
             <tbody id="table-body">
                 <tr>
-                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Initializing active tracks...</td>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Initializing active tracks...</td>
                 </tr>
             </tbody>
         </table>
@@ -346,18 +347,32 @@
     // Main tracking query
     async function fetchTrackerData() {
         const tbody = document.getElementById('table-body');
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Scanning real-time transactions...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Scanning real-time transactions...</td></tr>';
 
         try {
-            // Fetch everything sorted by newest action first to build precise tracking timelines
-            const { data: events, error } = await _supabase
-                .from('document_tracking_events')
-                .select('created_at, parent_qr_code, department, status, received_by, picked_up_by')
-                .order('created_at', { ascending: false });
+            // Fetch tracking events AND log entries to cross-reference project names
+            const [{ data: events, error: eventsErr }, { data: logs, error: logsErr }] = await Promise.all([
+                _supabase
+                    .from('document_tracking_events')
+                    .select('created_at, parent_qr_code, department, status, received_by, picked_up_by')
+                    .order('created_at', { ascending: false }),
+                _supabase
+                    .from('combined_routing_logs')
+                    .select('qr_code, project_name')
+            ]);
 
-            if (error) throw error;
+            if (eventsErr) throw eventsErr;
+
+            // Build QR Code -> Project Name lookup map
+            const projectMap = {};
+            if (logs) {
+                logs.forEach(log => {
+                    if (log.qr_code) projectMap[log.qr_code] = log.project_name;
+                });
+            }
+
             if (!events || events.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">No historical data found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No historical data found.</td></tr>';
                 return;
             }
 
@@ -375,7 +390,6 @@
             // Extract the latest event for primary table rows
             const uniqueLatestEvents = [];
             Object.keys(groupsByQR).forEach(qr => {
-                // Since our query was ordered newest first, the first item in each group array is the latest
                 const latestEvent = groupsByQR[qr][0];
                 uniqueLatestEvents.push({
                     latest: latestEvent,
@@ -383,7 +397,7 @@
                 });
             });
 
-            // Sort the primary rows so the documents with the newest overall transactions appear first
+            // Sort primary rows so documents with newest transactions appear first
             uniqueLatestEvents.sort((a, b) => new Date(b.latest.created_at) - new Date(a.latest.created_at));
 
             // Filter primary items based on view context
@@ -403,7 +417,7 @@
             tbody.innerHTML = '';
 
             if (filteredGroups.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">No documents in "${currentView}" queue.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No documents in "${currentView}" queue.</td></tr>`;
                 return;
             }
 
@@ -411,9 +425,10 @@
             filteredGroups.forEach(group => {
                 const mainItem = group.latest;
                 const qrCode = mainItem.parent_qr_code;
+                const projectName = projectMap[qrCode] || '---';
                 const statusStr = (mainItem.status || '').toLowerCase();
                 
-                // Determine the correct responsible handler
+                // Determine responsible handler
                 let handler = '---';
                 if (statusStr.includes('picked up')) {
                     handler = mainItem.picked_up_by || '---';
@@ -431,7 +446,7 @@
                     badgeClass = 'badge-archive';
                 }
 
-                // Build the collapsed timeline HTML string
+                // Build collapsed timeline HTML
                 let timelineHTML = '';
                 group.history.forEach((histEvent, index) => {
                     const isNewest = index === 0;
@@ -451,7 +466,7 @@
                     `;
                 });
 
-                // Generate Master Tr row and corresponding Hidden history container row
+                // Master row
                 const trMaster = document.createElement('tr');
                 trMaster.className = 'data-row';
                 trMaster.id = `row-master-${qrCode}`;
@@ -460,16 +475,18 @@
                     <td style="text-align: center;"><span class="indicator-arrow">▶</span></td>
                     <td style="color: var(--neon-blue); font-weight: 600;">${formatTime(mainItem.created_at)}</td>
                     <td style="font-family: monospace; letter-spacing: 0.5px;">${qrCode}</td>
+                    <td style="font-weight: 700; color: #ffffff;">${projectName}</td>
                     <td><strong>${mainItem.department || '---'}</strong></td>
                     <td><span class="badge ${badgeClass}">${mainItem.status || 'Unknown'}</span></td>
                     <td>${handler}</td>
                 `;
 
+                // Detail audit row
                 const trDetail = document.createElement('tr');
                 trDetail.className = 'history-row';
                 trDetail.id = `row-detail-${qrCode}`;
                 trDetail.innerHTML = `
-                    <td colspan="6">
+                    <td colspan="7">
                         <div class="history-container">
                             <div class="history-title">Document Audit Trail (Newest First)</div>
                             <div class="timeline">
@@ -485,7 +502,7 @@
 
         } catch (err) {
             console.error("Fetch Error:", err);
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff4d4d; padding: 30px;">Database communication error: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #ff4d4d; padding: 30px;">Database communication error: ${err.message}</td></tr>`;
         }
     }
 
