@@ -3,451 +3,388 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PHMC Document Control - Outbound Entry</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <title>Unified QR Routing & Printable Slip Generator</title>
+    
+    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- QRCode.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <style>
         :root {
-            --neon: #0ef;
-            --neon-hover: #0bc2cc;
-            --bg-dark: #081b29;
-            --panel-bg: rgba(8, 27, 41, 0.65);
-            --border-glow: rgba(0, 238, 255, 0.2);
-            --text-light: #ededed;
-            --text-muted: #a2bccc;
-            --success: #39ff14; /* Neon Green */
-            --inbound: #bd00ff; /* Neon Purple */
-            --warning: #ffb700; /* Neon Orange */
+            --primary: #1e3a8a;
+            --primary-hover: #1d4ed8;
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --border: #cbd5e1;
+            --readonly-bg: #f1f5f9;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; -webkit-print-color-adjust: exact; }
-
-        body { 
-            background: var(--bg-dark); 
-            color: var(--text-light);
-            min-height: 100vh;
-            padding: 30px 20px;
-            overflow-x: hidden;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .main-layout { 
-            max-width: 1400px; 
-            margin: auto; 
+        body {
+            background-color: var(--bg-main);
+            color: var(--text);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
             display: flex;
             flex-direction: column;
-            gap: 25px;
         }
 
-        /* Glassmorphic Cyberpunk Header / Navbar */
-        .header-flex { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            background: var(--panel-bg); 
-            padding: 15px 25px; 
-            border-radius: 12px; 
-            border: 1px solid var(--border-glow);
-            box-shadow: 0 0 15px rgba(0, 238, 255, 0.1);
-        }
-        
-        .header-title-area {
-            display: flex; 
-            align-items: center; 
-            gap: 15px;
-        }
-        .header-title-area img {
-            height: 45px;
-            filter: drop-shadow(0 0 5px var(--neon));
-        }
-        .header-title-area h1 {
-            color: var(--text-light);
-            text-shadow: 0 0 8px var(--neon);
-            font-size: 1.6rem;
-            font-weight: 700;
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #475569;
         }
 
-        /* Navigation Buttons */
-        .nav-links { display: flex; gap: 10px; align-items: center; }
-        .nav-btn {
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            text-decoration: none;
-            color: var(--text-muted); 
-            font-size: 0.8rem; 
-            font-weight: 700; 
-            padding: 10px 16px;
-            border-radius: 8px; 
-            border: 1px solid var(--border-glow); 
-            background: rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-            cursor: pointer; 
-            text-transform: uppercase;
-            user-select: none;
-        }
-        .nav-btn:hover, .nav-btn.active { 
-            background: var(--neon); 
-            color: var(--bg-dark); 
-            border-color: var(--neon);
-            box-shadow: 0 0 12px var(--neon);
-        }
-        .nav-btn.btn-logout { 
-            border-color: rgba(217, 83, 79, 0.4); 
-            color: #ff4d4d; 
-        }
-        .nav-btn.btn-logout:hover { 
-            background: #ff4d4d; 
-            color: white; 
-            border-color: #ff4d4d;
-            box-shadow: 0 0 12px #ff4d4d;
-        }
-
-        /* Glass Cards for Form Sections */
-        .section-box { 
-            background: var(--panel-bg); 
-            padding: 25px; 
-            border-radius: 12px; 
-            border: 1px solid var(--border-glow);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3); 
-        }
-
-        .section-box h3 {
-            margin-top: 0;
-            margin-bottom: 20px;
-            color: var(--neon);
-            text-shadow: 0 0 8px var(--neon);
-            font-size: 1.2rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-        .form-group { display: flex; flex-direction: column; }
-        .full-width { grid-column: span 2; }
-        
-        label { 
-            font-size: 0.75rem; 
-            font-weight: 700; 
-            color: var(--neon); 
-            margin-bottom: 6px; 
-            text-transform: uppercase; 
-            letter-spacing: 1px;
-        }
-
-        input { 
-            padding: 12px 15px; 
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--border-glow); 
-            border-radius: 6px; 
-            font-size: 0.95rem; 
-            color: var(--text-light);
-            outline: none;
-            transition: all 0.3s ease;
-        }
-
-        input:focus {
-            border-color: var(--neon);
-            box-shadow: 0 0 10px rgba(0, 238, 255, 0.3);
-            background: rgba(0, 0, 0, 0.6);
-        }
-
-        /* Buttons */
-        button { 
-            padding: 14px; 
-            border: none; 
-            border-radius: 6px; 
-            font-weight: 800; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .btn-primary { 
-            background: var(--neon); 
-            color: var(--bg-dark); 
-            width: 100%; 
-            margin-top: 15px;
-            box-shadow: 0 0 12px var(--neon);
-        }
-        .btn-primary:hover {
-            background: var(--neon-hover);
-            box-shadow: 0 0 20px var(--neon);
-        }
-
-        .btn-success { 
-            background: var(--success); 
-            color: var(--bg-dark); 
-            width: 100%; 
-            margin-top: 15px; 
-            box-shadow: 0 0 12px var(--success);
-        }
-        .btn-success:hover {
-            background: #2ee610;
-            box-shadow: 0 0 20px var(--success);
-        }
-
-        .reprint-box { 
-            border-top: 3px solid var(--border-glow); 
-        }
-        .search-row { display: flex; gap: 15px; margin-top: 15px; align-items: center; }
-        .search-row input { flex-grow: 1; }
-
-        /* Uiverse Fetch Button styled to match Theme */
-        .uiverse-btn {
-            position: relative; 
-            width: 140px; 
-            height: 44px; 
-            background-color: var(--bg-dark);
-            display: flex; 
-            align-items: center; 
-            color: var(--neon); 
-            font-weight: bold;
-            justify-content: center; 
-            border: 1px solid var(--border-glow); 
-            border-radius: 8px; 
-            cursor: pointer; 
-            z-index: 1;
-            transition: 0.3s;
-        }
-        .uiverse-btn:hover {
-            background: var(--neon);
-            color: var(--bg-dark);
-            box-shadow: 0 0 15px var(--neon);
-        }
-
-        /* PRINTABLE SLIP OVERRIDES (Preserved Clean White for A4 Printing) */
-        #printable-slip { 
-            background: white; 
-            color: #000;
-            padding: 0 40px; 
-            display: none; 
-            flex-direction: column; 
-            width: 100%; 
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-        .slip-header { 
-            width: 100%; display: flex; justify-content: center; padding: 20px 0;
-            border-bottom: 4px solid #299c29; margin-bottom: 20px;
-        }
-        .slip-logo { width: 620px; height: auto; object-fit: contain; }
-        
-        .slip-body { display: flex; justify-content: space-between; align-items: flex-start; padding: 0 10px; }
-        .details-area { flex: 1; }
-        #slip-proj { margin: 0 0 12px 0; font-size: 20pt; color: #1a73ba; text-transform: uppercase; font-weight: 800; }
-        
-        .info-row { font-size: 12pt; margin-bottom: 6px; color: #333; }
-        .info-row strong { width: 140px; display: inline-block; color: #111; }
-
-        /* Routing Plan Display */
-        .routing-plan-box {
-            margin-top: 15px;
+        .form-group input, .form-group select {
             padding: 10px;
-            border: 1px dashed #ccc;
-            background: #fafafa;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            outline: none;
         }
-        .routing-title { font-size: 10pt; font-weight: bold; color: #1a73ba; margin-bottom: 5px; }
-        #slip-routing { font-size: 11pt; color: #333; line-height: 1.4; }
 
-        .qr-side { text-align: center; padding-left: 30px; }
-        .scan-instruction { 
-            font-size: 11pt; 
-            font-weight: bold; 
-            color: #1a73ba; 
-            margin-bottom: 8px; 
-            text-transform: uppercase;
+        /* Locked / Auto-filled style */
+        .form-group input[readonly] {
+            background-color: var(--readonly-bg);
+            color: #64748b;
+            cursor: not-allowed;
+            border-color: #e2e8f0;
         }
-        .hex-display { font-family: monospace; font-size: 22pt; font-weight: bold; border: 2px solid #000; padding: 5px 15px; display: block; margin-top: 10px; color: #000; }
 
-        .slogan {
-            text-align: center; font-weight: bold; font-style: italic; font-size: 14pt;
-            color: #299c29; margin-top: 25px; padding-bottom: 20px;
-            border-bottom: 4px solid #299c29; letter-spacing: 1px;
+        .dept-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 10px;
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .dept-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .btn-submit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Printable Slip Section */
+        #printable-slip {
+            display: none;
+            margin-top: 30px;
+            border: 2px dashed #94a3b8;
+            padding: 20px;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .slip-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .slip-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .slip-qr-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
         }
 
         @media print {
-            body { background: white; padding: 0; }
-            .header-flex, .section-box, h2:not(#slip-proj), button, .reprint-box { display: none !important; }
-            #printable-slip { display: flex !important; position: absolute; top: 0; left: 0; width: 210mm; }
-            @page { size: A4 portrait; margin: 0; }
+            body * {
+                visibility: hidden;
+            }
+            #printable-slip, #printable-slip * {
+                visibility: visible;
+            }
+            #printable-slip {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                border: none;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div class="main-layout">
-        
-        <!-- HEADER / NAVIGATION -->
-        <div class="header-flex">
-            <div class="header-title-area">
-                <img src="https://i.imgur.com/VbZKWAf.png" alt="PHMC Logo">
-                <h1>Outbound Document Control</h1>
+<div class="container">
+    <h2>Unified Routing & QR Slip Generator</h2>
+
+    <form id="routing-form">
+        <!-- Auto-filled & Locked Staff Context -->
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Staff Name</label>
+                <input type="text" id="staff_name" placeholder="Fetching staff profile..." readonly>
             </div>
-            
-            <div class="nav-links">
-                <a href="dashboard.html" class="nav-btn">QR Tracking</a>
-                <div class="nav-btn active" id="nav-outbound">Outbound Logs</div>
-                <a href="dashboard.html" class="nav-btn">Archive</a>
-                <div class="nav-btn" onclick="location.reload()">Refresh</div>
-                <div class="nav-btn btn-logout" onclick="handleLogout()">Log Out</div>
+            <div class="form-group">
+                <label>Department Origin</label>
+                <input type="text" id="origin_dept" placeholder="Fetching origin..." readonly>
+            </div>
+            <div class="form-group">
+                <label>Team</label>
+                <input type="text" id="team" placeholder="Fetching team..." readonly>
             </div>
         </div>
 
-        <!-- NEW DOCUMENT ENTRY -->
-        <div class="section-box">
-            <h3>New Document Entry</h3>
-            <div class="form-grid">
-                <div class="form-group"><label>Category</label><input list="cat-list" id="category"><datalist id="cat-list"></datalist></div>
-                <div class="form-group"><label>Project Name</label><input type="text" id="project_name"></div>
-                <div class="form-group"><label>Department Origin</label><input type="text" id="origin_dept"></div>
-                <div class="form-group"><label>Staff Name</label><input type="text" id="staff_name"></div>
-                <div class="form-group full-width">
-                    <label>Routing Plan (Enter departments separated by commas)</label>
-                    <input type="text" id="departments" placeholder="e.g. Women's Health, Laboratory, Finance">
-                </div>
+        <!-- Document / Log Information -->
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Category</label>
+                <select id="category" required>
+                    <option value="">Select Category...</option>
+                    <option value="Medical Record">Medical Record</option>
+                    <option value="Administrative Document">Administrative Document</option>
+                    <option value="Billing / Finance">Billing / Finance</option>
+                    <option value="Equipment / Asset">Equipment / Asset</option>
+                </select>
             </div>
-            <button class="btn-primary" id="proc-btn" onclick="processAll()">SAVE & GENERATE SLIP</button>
+            <div class="form-group">
+                <label>Project / Document Name</label>
+                <input type="text" id="project_name" placeholder="e.g. Patient File #9401" required>
+            </div>
         </div>
 
-        <!-- REPRINT BOX -->
-        <div class="section-box reprint-box">
-            <label>Reprint Slip</label>
-            <div class="search-row">
-                <input type="text" id="reprint-id" placeholder="Enter Hex ID">
-                <button class="uiverse-btn" onclick="reprintSlip()">FETCH</button>
-            </div>
-            <button class="btn-success" id="print-btn" onclick="window.print()" style="display:none;">🖨️ PRINT SLIP</button>
+        <!-- Destination Selection -->
+        <label style="font-size:0.85rem; font-weight:600; color:#475569;">Target Destination Departments</label>
+        <div class="dept-checkboxes" id="dept-container">
+            <label class="dept-item"><input type="checkbox" value="Health Information Section"> HIS</label>
+            <label class="dept-item"><input type="checkbox" value="Billing & Claims"> Billing</label>
+            <label class="dept-item"><input type="checkbox" value="Pharmacy"> Pharmacy</label>
+            <label class="dept-item"><input type="checkbox" value="Laboratory"> Laboratory</label>
+            <label class="dept-item"><input type="checkbox" value="Radiology"> Radiology</label>
+            <label class="dept-item"><input type="checkbox" value="Admitting Section"> Admitting</label>
         </div>
 
-        <!-- PRINTABLE SLIP CONTAINER -->
-        <div id="printable-slip">
-            <div class="slip-header"><img src="https://i.imgur.com/5SCk9eU.jpeg" class="slip-logo"></div>
-            <div class="slip-body">
-                <div class="details-area">
-                    <h2 id="slip-proj">---</h2>
-                    <div class="info-row"><strong>CATEGORY:</strong> <span id="slip-cat">---</span></div>
-                    <div class="info-row"><strong>ORIGIN DEPT:</strong> <span id="slip-origin">---</span></div>
-                    <div class="info-row"><strong>STAFF:</strong> <span id="slip-staff">---</span></div>
-                    <div class="info-row"><strong>DATE:</strong> <span id="slip-date">---</span></div>
-                    
-                    <!-- Routing Plan Display Section -->
-                    <div class="routing-plan-box">
-                        <div class="routing-title">DOCUMENT ROUTING PLAN:</div>
-                        <div id="slip-routing">---</div>
-                    </div>
-                </div>
-                <div class="qr-side">
-                    <div class="scan-instruction">Scan Me to Update Us ↓</div>
-                    <div id="qr-target"></div>
-                    <div id="display-hex" class="hex-display">-----</div>
-                </div>
-            </div>
-            <div class="slogan">Dedicated To Life</div>
+        <button type="button" class="btn-submit" onclick="processAll()">Generate Routing Slip & Save Log</button>
+    </form>
+
+    <!-- Printable Slip View -->
+    <div id="printable-slip">
+        <div class="slip-header">
+            <h3>PERPETUAL HELP MEDICAL CENTER</h3>
+            <p>Unified Routing & Tracking Slip</p>
         </div>
+        <hr><br>
+        <div class="slip-details">
+            <div><strong>Document/Project:</strong> <span id="slip-project">---</span></div>
+            <div><strong>Category:</strong> <span id="slip-category">---</span></div>
+            <div><strong>Staff Name:</strong> <span id="slip-staff">---</span></div>
+            <div><strong>Origin Dept:</strong> <span id="slip-origin">---</span></div>
+            <div><strong>Team:</strong> <span id="slip-team">---</span></div>
+            <div><strong>Tracking Code:</strong> <span id="slip-code">---</span></div>
+        </div>
+        <div>
+            <strong>Route Checklist:</strong>
+            <ul id="slip-destinations" style="margin-left: 20px; margin-top: 5px;"></ul>
+        </div>
+        <div class="slip-qr-container">
+            <div id="qrcode"></div>
+        </div>
+        <p style="text-align: center; font-size: 0.8rem; color: #64748b;">Scan QR Code to update status in tracking portal</p>
     </div>
+</div>
 
-    <script>
-        const _supabase = supabase.createClient(
-            'https://onozvyuowebbwuvcqlzt.supabase.co', 
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ub3p2eXVvd2ViYnd1dmNxbHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc1NTQsImV4cCI6MjA5MjQyMzU1NH0.1EddoNcvgmQpO2eVZ8d4tXcDOJJC5BJNOckRRKJOzh0'
-        );
+<script>
+    // Supabase Initialization
+    const SUPABASE_URL = "YOUR_SUPABASE_URL_HERE";
+    const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        async function handleLogout() {
-            if (_supabase.auth && typeof _supabase.auth.signOut === 'function') {
-                try {
-                    await _supabase.auth.signOut();
-                } catch (err) {
-                    console.error("Session clear warning:", err);
+    let qrCodeInstance = null;
+
+    // Run Profile Auto-fetch on DOM Load
+    document.addEventListener('DOMContentLoaded', () => {
+        initUserProfile();
+    });
+
+    /**
+     * Auto-fetches logged-in user profile & locks inputs
+     */
+    async function initUserProfile() {
+        try {
+            // 1. Get logged-in user session
+            const { data: { user }, error } = await _supabase.auth.getUser();
+
+            if (error || !user) {
+                console.warn('No user session found. Redirecting to login...');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // 2. Extract metadata if available during sign-up
+            let name = user.user_metadata?.name || user.user_metadata?.full_name || '';
+            let department = user.user_metadata?.department || '';
+            let team = user.user_metadata?.team || '';
+
+            // 3. Fallback: Query 'user_profiles' table if user_metadata is incomplete
+            if (!name || !department || !team) {
+                const { data: profile, error: profileErr } = await _supabase
+                    .from('user_profiles')
+                    .select('name, department, team')
+                    .eq('email', user.email)
+                    .single();
+
+                if (profile && !profileErr) {
+                    name = name || profile.name;
+                    department = department || profile.department;
+                    team = team || profile.team;
                 }
             }
-            window.location.href = 'index.html';
+
+            // 4. Populate Form Controls
+            document.getElementById('staff_name').value = name || user.email;
+            document.getElementById('origin_dept').value = department || 'General';
+            document.getElementById('team').value = team || 'Default';
+
+        } catch (err) {
+            console.error('Error during profile initialization:', err);
+        }
+    }
+
+    /**
+     * Generates tracking code, stores entry into Supabase, and triggers printable view
+     */
+    async function processAll() {
+        const staff = document.getElementById('staff_name').value;
+        const origin = document.getElementById('origin_dept').value;
+        const team = document.getElementById('team').value;
+        const cat = document.getElementById('category').value;
+        const proj = document.getElementById('project_name').value;
+
+        // Collect Checked Departments
+        const selectedDepts = Array.from(document.querySelectorAll('#dept-container input[type="checkbox"]:checked'))
+            .map(cb => cb.value);
+
+        if (!cat || !proj) {
+            alert('Please fill out the category and project name.');
+            return;
         }
 
-        async function loadCategories() {
-            const { data } = await _supabase.from('combined_routing_logs').select('category');
-            if (data) {
-                const uniqueCats = [...new Set(data.map(item => item.category))];
-                document.getElementById('cat-list').innerHTML = uniqueCats.map(c => `<option value="${c}">`).join('');
-            }
+        if (selectedDepts.length === 0) {
+            alert('Please select at least one destination department.');
+            return;
         }
 
-        async function processAll() {
-            const btn = document.getElementById('proc-btn');
-            const cat = document.getElementById('category').value;
-            const proj = document.getElementById('project_name').value;
-            const origin = document.getElementById('origin_dept').value;
-            const staff = document.getElementById('staff_name').value;
-            const deptsInput = document.getElementById('departments').value;
+        // Generate unique hex code for QR code tracking
+        const trackingHex = 'PHMC-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+        const fullTrackingLink = `https://yourdomain.com/track.html?code=${trackingHex}`;
 
-            if(!cat || !proj) return alert("Fill Name and Category");
-            btn.disabled = true;
+        // Prepare Database Payload
+        const payload = {
+            category: cat,
+            project_name: proj,
+            qr_code: trackingHex,
+            qr_link: fullTrackingLink,
+            origin_dept: origin,
+            staff_name: staff,
+            team: team,
+            departments: selectedDepts,
+            status: 'Active'
+        };
 
-            // Convert comma-separated string to a clean Array
-            const deptsArray = deptsInput.split(',').map(d => d.trim()).filter(d => d !== "");
+        try {
+            // Save to Supabase 'combined_routing_logs'
+            const { data, error } = await _supabase
+                .from('combined_routing_logs')
+                .insert([payload]);
 
-            let hex = Math.floor(Math.random() * 0xfffff).toString(16).toUpperCase().padStart(5, '0');
-            const fullLink = `https://vallealfrie-png.github.io/Document-Tracker/track.html?id=${hex}`;
+            if (error) throw error;
 
-            const { error } = await _supabase.from('combined_routing_logs').insert([{
-                category: cat, 
-                project_name: proj, 
-                qr_code: hex, 
-                qr_link: fullLink, 
-                origin_dept: origin, 
-                staff_name: staff, 
-                departments: deptsArray, // Sending as Array
-                status: 'Active'
-            }]);
+            // Render Printable Slip Info
+            document.getElementById('slip-project').innerText = proj;
+            document.getElementById('slip-category').innerText = cat;
+            document.getElementById('slip-staff').innerText = staff;
+            document.getElementById('slip-origin').innerText = origin;
+            document.getElementById('slip-team').innerText = team;
+            document.getElementById('slip-code').innerText = trackingHex;
 
-            if(!error) {
-                renderSlip(cat, proj, hex, origin, staff, fullLink, deptsArray);
-                document.getElementById('print-btn').style.display = 'block';
-                btn.innerText = "SAVED";
-                loadCategories();
-            } else { 
-                alert("Error: " + error.message); 
-                btn.disabled = false; 
-                btn.innerText = "SAVE & GENERATE SLIP";
-            }
+            const deptList = document.getElementById('slip-destinations');
+            deptList.innerHTML = selectedDepts.map(d => `<li>[ ] ${d}</li>`).join('');
+
+            // Render QR Code
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = ''; // Clear previous
+            qrCodeInstance = new QRCode(qrContainer, {
+                text: fullTrackingLink,
+                width: 120,
+                height: 120
+            });
+
+            // Display printable slip view
+            document.getElementById('printable-slip').style.display = 'block';
+            
+            // Optional: Auto-trigger print prompt
+            // window.print();
+
+        } catch (err) {
+            console.error('Error logging routing slip:', err);
+            alert('Failed to save log to Supabase. Check console for details.');
         }
+    }
+</script>
 
-        async function reprintSlip() {
-            const searchId = document.getElementById('reprint-id').value.toUpperCase().trim();
-            if(!searchId) return;
-            const { data, error } = await _supabase.from('combined_routing_logs').select('*').eq('qr_code', searchId).single();
-            if (data) {
-                renderSlip(data.category, data.project_name, data.qr_code, data.origin_dept, data.staff_name, data.qr_link, data.departments);
-                document.getElementById('print-btn').style.display = 'block';
-            } else { 
-                alert(error ? error.message : "ID not found."); 
-            }
-        }
-
-        function renderSlip(cat, proj, hex, origin, staff, link, depts) {
-            document.getElementById('slip-cat').innerText = cat;
-            document.getElementById('slip-proj').innerText = proj;
-            document.getElementById('display-hex').innerText = hex;
-            document.getElementById('slip-origin').innerText = origin || "N/A";
-            document.getElementById('slip-staff').innerText = staff || "N/A";
-            document.getElementById('slip-date').innerText = new Date().toLocaleDateString();
-
-            // Formatting the departments for the slip
-            const routingDisplay = document.getElementById('slip-routing');
-            if (depts && depts.length > 0) {
-                // Joins array with arrows for a clear visual path
-                routingDisplay.innerText = depts.join(' ➔ ');
-            } else {
-                routingDisplay.innerText = "No specific routing plan.";
-            }
-
-            const qrContainer = document.getElementById('qr-target');
-            qrContainer.innerHTML = "";
-            new QRCode(qrContainer, { text: link, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.H });
-            document.getElementById('printable-slip').style.display = 'flex';
-        }
-
-        loadCategories();
-    </script>
 </body>
 </html>
