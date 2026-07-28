@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PHMC Document Control - Live Dashboard</title>
+    <title>PHMC Document Control - Rebuilt Live Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -161,23 +161,36 @@
         .badge-signed { background: rgba(57, 255, 20, 0.1); color: var(--neon-green); border: 1px solid var(--neon-green); }
         .badge-archive { background: rgba(189, 0, 255, 0.1); color: #d666ff; border: 1px solid var(--neon-purple); }
 
-        /* Finish Action Button */
-        .btn-finish {
-            background: rgba(57, 255, 20, 0.15);
-            color: var(--neon-green);
-            border: 1px solid var(--neon-green);
-            padding: 6px 12px;
+        /* Action Buttons Inside Rows */
+        .action-btn-group {
+            display: flex;
+            gap: 6px;
+        }
+        .action-btn {
+            background: rgba(0, 238, 255, 0.1);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 5px 10px;
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 700;
             cursor: pointer;
-            text-transform: uppercase;
             transition: all 0.2s ease;
         }
-        .btn-finish:hover {
+        .action-btn:hover {
+            background: var(--neon-blue);
+            color: var(--bg-dark);
+            box-shadow: 0 0 8px var(--neon-blue);
+        }
+        .action-btn.btn-archive {
+            background: rgba(57, 255, 20, 0.1);
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+        }
+        .action-btn.btn-archive:hover {
             background: var(--neon-green);
             color: var(--bg-dark);
-            box-shadow: 0 0 10px var(--neon-green);
+            box-shadow: 0 0 8px var(--neon-green);
         }
 
         /* Collapse / Expand Elements */
@@ -274,9 +287,9 @@
             <h1>DOC-CONTROL</h1>
         </div>
         <div class="nav-links">
-            <button class="nav-btn active" id="btn-active" onclick="setView('active')">Active Logs</button>
-            <a href="unified-log.html" class="nav-btn">Outbound Form</a>
-            <button class="nav-btn" id="btn-archived" onclick="setView('archived')">Archived / Finished</button>
+            <button class="nav-btn active" id="btn-active" onclick="setView('active')">Active</button>
+            <a href="unified-log.html" class="nav-btn">Outgoing</a>
+            <button class="nav-btn" id="btn-archived" onclick="setView('archived')">Archived</button>
             <div class="nav-btn btn-logout" onclick="handleLogout()">Log Out</div>
         </div>
     </div>
@@ -296,7 +309,7 @@
                     <th>Current Department Location</th>
                     <th>Transition Status</th>
                     <th>Handled By</th>
-                    <th style="text-align: center;">Action</th>
+                    <th style="text-align: center;">Actions</th>
                 </tr>
             </thead>
             <tbody id="table-body">
@@ -329,35 +342,6 @@
         window.location.href = 'index.html';
     }
 
-    // Mark document as Finished by inserting into `finished_documents`
-    async function markAsFinished(event, qrCode, projectName, currentDept, currentHandler) {
-        event.stopPropagation(); // Prevents row expand click trigger
-        
-        const approverName = prompt(`Enter Approver / Signee name for document [${qrCode}]:`, currentHandler || '');
-        
-        if (!approverName) {
-            return; // Canceled
-        }
-
-        try {
-            const { error } = await _supabase
-                .from('finished_documents')
-                .insert([{
-                    qr_code: qrCode,
-                    project_name: projectName !== '---' ? projectName : 'Unnamed Project',
-                    approved_by: approverName.trim(),
-                    final_department: currentDept || 'Finished Stage'
-                }]);
-
-            if (error) throw error;
-
-            // Instantly reload local table view
-            fetchTrackerData();
-        } catch (err) {
-            alert('Failed to complete document: ' + err.message);
-        }
-    }
-
     // Formats dates reliably
     function formatTime(isoString) {
         if (!isoString) return '---';
@@ -388,6 +372,34 @@
         }
     }
 
+    // Handle action button events without triggering row expand/collapse
+    async function handleDocumentAction(event, qrCode, actionType) {
+        // Prevent clicking the button from toggling row collapse!
+        event.stopPropagation();
+
+        if (actionType === 'archive') {
+            const confirmArchive = confirm(`Are you sure you want to mark ${qrCode} as Completed/Archived?`);
+            if (!confirmArchive) return;
+
+            try {
+                // Insert new tracking event marking document as approved/archived
+                const { error } = await _supabase
+                    .from('document_tracking_events')
+                    .insert([{
+                        parent_qr_code: qrCode,
+                        status: 'Approved / Archived',
+                        department: 'Archive Unit',
+                        received_by: 'System Admin'
+                    }]);
+
+                if (error) throw error;
+                fetchTrackerData();
+            } catch (err) {
+                alert('Action failed: ' + err.message);
+            }
+        }
+    }
+
     // Handle view switches
     function setView(viewName) {
         currentView = viewName;
@@ -396,10 +408,11 @@
         const activeBtn = document.getElementById(`btn-${viewName}`);
         if (activeBtn) activeBtn.classList.add('active');
 
+        // Dynamic page titles
         if (viewName === 'active') {
             document.getElementById('view-title').innerText = "Active Document Lifeline";
         } else {
-            document.getElementById('view-title').innerText = "Archived / Finished Documents";
+            document.getElementById('view-title').innerText = "Archived Documents";
         }
         
         fetchTrackerData();
@@ -411,34 +424,18 @@
         tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">Scanning real-time transactions...</td></tr>';
 
         try {
-            // Fetch events, routing logs, AND finished_documents simultaneously
-            const [{ data: events, error: eventsErr }, { data: logs }, { data: finishedDocs, error: finishedErr }] = await Promise.all([
+            // Fetch tracking events AND log entries to cross-reference project names
+            const [{ data: events, error: eventsErr }, { data: logs, error: logsErr }] = await Promise.all([
                 _supabase
                     .from('document_tracking_events')
                     .select('created_at, parent_qr_code, department, status, received_by, picked_up_by')
                     .order('created_at', { ascending: false }),
                 _supabase
                     .from('combined_routing_logs')
-                    .select('qr_code, project_name'),
-                _supabase
-                    .from('finished_documents')
-                    .select('qr_code, project_name, approved_by, final_department, created_at')
+                    .select('qr_code, project_name')
             ]);
 
             if (eventsErr) throw eventsErr;
-            if (finishedErr) throw finishedErr;
-
-            // Build map of Finished QR codes for fast lookup
-            const finishedSet = new Set();
-            const finishedMap = {};
-            if (finishedDocs) {
-                finishedDocs.forEach(item => {
-                    if (item.qr_code) {
-                        finishedSet.add(item.qr_code);
-                        finishedMap[item.qr_code] = item;
-                    }
-                });
-            }
 
             // Build QR Code -> Project Name lookup map
             const projectMap = {};
@@ -453,7 +450,7 @@
                 return;
             }
 
-            // Group ALL events under their respective parent_qr_codes
+            // Group ALL events under their respective parent_qr_codes chronologically
             const groupsByQR = {};
             events.forEach(event => {
                 const qr = event.parent_qr_code;
@@ -467,11 +464,10 @@
             // Extract the latest event for primary table rows
             const uniqueLatestEvents = [];
             Object.keys(groupsByQR).forEach(qr => {
+                const latestEvent = groupsByQR[qr][0];
                 uniqueLatestEvents.push({
-                    latest: groupsByQR[qr][0],
-                    history: groupsByQR[qr],
-                    isFinished: finishedSet.has(qr),
-                    finishedData: finishedMap[qr] || null
+                    latest: latestEvent,
+                    history: groupsByQR[qr]
                 });
             });
 
@@ -481,9 +477,15 @@
             // Filter primary items based on view context
             let filteredGroups = [];
             if (currentView === 'active') {
-                filteredGroups = uniqueLatestEvents.filter(item => !item.isFinished);
+                filteredGroups = uniqueLatestEvents.filter(item => {
+                    const status = (item.latest.status || '').toLowerCase();
+                    return !status.includes('finish') && !status.includes('approve') && !status.includes('archive');
+                });
             } else if (currentView === 'archived') {
-                filteredGroups = uniqueLatestEvents.filter(item => item.isFinished);
+                filteredGroups = uniqueLatestEvents.filter(item => {
+                    const status = (item.latest.status || '').toLowerCase();
+                    return status.includes('finish') || status.includes('approve') || status.includes('archive');
+                });
             }
 
             tbody.innerHTML = '';
@@ -497,28 +499,33 @@
             filteredGroups.forEach(group => {
                 const mainItem = group.latest;
                 const qrCode = mainItem.parent_qr_code;
-                const projectName = projectMap[qrCode] || (group.finishedData ? group.finishedData.project_name : '---');
+                const projectName = projectMap[qrCode] || '---';
                 const statusStr = (mainItem.status || '').toLowerCase();
                 
-                let handler = group.isFinished ? group.finishedData.approved_by : (statusStr.includes('picked up') ? (mainItem.picked_up_by || '---') : (mainItem.received_by || '---'));
-                let department = group.isFinished ? group.finishedData.final_department : (mainItem.department || '---');
-                let statusText = group.isFinished ? 'FINISHED' : (mainItem.status || 'Unknown');
+                // Determine responsible handler
+                let handler = '---';
+                if (statusStr.includes('picked up')) {
+                    handler = mainItem.picked_up_by || '---';
+                } else {
+                    handler = mainItem.received_by || '---';
+                }
 
                 // Color-code active state badges
                 let badgeClass = 'badge-received';
-                if (group.isFinished) {
-                    badgeClass = 'badge-archive';
-                } else if (statusStr.includes('pick') || statusStr.includes('outgoing') || statusStr.includes('forward')) {
+                if (statusStr.includes('pick') || statusStr.includes('outgoing') || statusStr.includes('forward')) {
                     badgeClass = 'badge-pickup';
                 } else if (statusStr.includes('sign') || statusStr.includes('approve')) {
                     badgeClass = 'badge-signed';
+                } else if (currentView === 'archived') {
+                    badgeClass = 'badge-archive';
                 }
 
-                // Action Column Content
-                let actionBtnHTML = '---';
-                if (currentView === 'active') {
-                    actionBtnHTML = `<button class="btn-finish" onclick="markAsFinished(event, '${qrCode}', '${projectName.replace(/'/g, "\\'")}', '${department.replace(/'/g, "\\'")}', '${handler.replace(/'/g, "\\'")}')">✓ Finish</button>`;
-                }
+                // Action buttons HTML
+                const actionButtonsHTML = currentView === 'active' 
+                    ? `<div class="action-btn-group">
+                        <button class="action-btn btn-archive" onclick="handleDocumentAction(event, '${qrCode}', 'archive')">Complete</button>
+                       </div>`
+                    : `<span style="color: var(--text-muted); font-size: 0.75rem;">Archived</span>`;
 
                 // Build collapsed timeline HTML
                 let timelineHTML = '';
@@ -550,10 +557,10 @@
                     <td style="color: var(--neon-blue); font-weight: 600;">${formatTime(mainItem.created_at)}</td>
                     <td style="font-family: monospace; letter-spacing: 0.5px;">${qrCode}</td>
                     <td style="font-weight: 700; color: #ffffff;">${projectName}</td>
-                    <td><strong>${department}</strong></td>
-                    <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                    <td><strong>${mainItem.department || '---'}</strong></td>
+                    <td><span class="badge ${badgeClass}">${mainItem.status || 'Unknown'}</span></td>
                     <td>${handler}</td>
-                    <td style="text-align: center;">${actionBtnHTML}</td>
+                    <td style="text-align: center;">${actionButtonsHTML}</td>
                 `;
 
                 // Detail audit row
@@ -584,8 +591,9 @@
     // Set up Realtime listener connection
     function initRealtime() {
         _supabase.channel('tracking-refresh')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'document_tracking_events' }, () => fetchTrackerData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'finished_documents' }, () => fetchTrackerData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'document_tracking_events' }, () => {
+                fetchTrackerData();
+            })
             .subscribe();
     }
 
