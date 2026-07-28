@@ -147,7 +147,7 @@
             background: rgba(0, 238, 255, 0.02);
         }
 
-        /* Status Pill Colors */
+        /* Status Badges */
         .badge { 
             padding: 5px 10px; 
             border-radius: 4px; 
@@ -165,32 +165,24 @@
         .action-btn-group {
             display: flex;
             gap: 6px;
+            justify-content: center;
         }
         .action-btn {
-            background: rgba(0, 238, 255, 0.1);
-            border: 1px solid var(--neon-blue);
-            color: var(--neon-blue);
-            padding: 5px 10px;
+            background: rgba(57, 255, 20, 0.1);
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            padding: 5px 12px;
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s ease;
+            text-transform: uppercase;
         }
         .action-btn:hover {
-            background: var(--neon-blue);
-            color: var(--bg-dark);
-            box-shadow: 0 0 8px var(--neon-blue);
-        }
-        .action-btn.btn-archive {
-            background: rgba(57, 255, 20, 0.1);
-            border-color: var(--neon-green);
-            color: var(--neon-green);
-        }
-        .action-btn.btn-archive:hover {
             background: var(--neon-green);
             color: var(--bg-dark);
-            box-shadow: 0 0 8px var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
         }
 
         /* Collapse / Expand Elements */
@@ -342,7 +334,7 @@
         window.location.href = 'index.html';
     }
 
-    // Formats dates reliably
+    // Formats dates
     function formatTime(isoString) {
         if (!isoString) return '---';
         const d = new Date(isoString);
@@ -372,31 +364,35 @@
         }
     }
 
-    // Handle action button events without triggering row expand/collapse
-    async function handleDocumentAction(event, qrCode, actionType) {
-        // Prevent clicking the button from toggling row collapse!
-        event.stopPropagation();
+    // Accurate completion logic using "finished_documents" table
+    async function approveDocument(event, qr, name, finalDept) {
+        // Prevent row expansion click event
+        if (event) event.stopPropagation();
 
-        if (actionType === 'archive') {
-            const confirmArchive = confirm(`Are you sure you want to mark ${qrCode} as Completed/Archived?`);
-            if (!confirmArchive) return;
+        const approver = prompt(`Final Approval: ${name}\nEnter your name:`);
+        if (!approver) return;
 
-            try {
-                // Insert new tracking event marking document as approved/archived
-                const { error } = await _supabase
-                    .from('document_tracking_events')
-                    .insert([{
-                        parent_qr_code: qrCode,
-                        status: 'Approved / Archived',
-                        department: 'Archive Unit',
-                        received_by: 'System Admin'
-                    }]);
+        try {
+            // Write directly to finished_documents table
+            const { error } = await _supabase.from('finished_documents').insert([{
+                qr_code: qr,
+                project_name: name,
+                approved_by: approver,
+                final_department: finalDept || 'FINAL ARCHIVE'
+            }]);
 
-                if (error) throw error;
-                fetchTrackerData();
-            } catch (err) {
-                alert('Action failed: ' + err.message);
-            }
+            if (error) throw error;
+
+            // Send Realtime Notification
+            await _supabase.from('document_notifications').insert([{ 
+                qr_code: qr, 
+                message: `✅ DOCUMENT FINISHED: ${name} approved by ${approver}` 
+            }]);
+
+            alert("Document Archived Successfully.");
+            fetchTrackerData();
+        } catch (err) {
+            alert("Archive Error: " + err.message);
         }
     }
 
@@ -408,7 +404,6 @@
         const activeBtn = document.getElementById(`btn-${viewName}`);
         if (activeBtn) activeBtn.classList.add('active');
 
-        // Dynamic page titles
         if (viewName === 'active') {
             document.getElementById('view-title').innerText = "Active Document Lifeline";
         } else {
@@ -424,163 +419,135 @@
         tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">Scanning real-time transactions...</td></tr>';
 
         try {
-            // Fetch tracking events AND log entries to cross-reference project names
-            const [{ data: events, error: eventsErr }, { data: logs, error: logsErr }] = await Promise.all([
-                _supabase
-                    .from('document_tracking_events')
-                    .select('created_at, parent_qr_code, department, status, received_by, picked_up_by')
-                    .order('created_at', { ascending: false }),
-                _supabase
-                    .from('combined_routing_logs')
-                    .select('qr_code, project_name')
-            ]);
-
-            if (eventsErr) throw eventsErr;
-
-            // Build QR Code -> Project Name lookup map
-            const projectMap = {};
-            if (logs) {
-                logs.forEach(log => {
-                    if (log.qr_code) projectMap[log.qr_code] = log.project_name;
-                });
-            }
-
-            if (!events || events.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">No historical data found.</td></tr>';
-                return;
-            }
-
-            // Group ALL events under their respective parent_qr_codes chronologically
-            const groupsByQR = {};
-            events.forEach(event => {
-                const qr = event.parent_qr_code;
-                if (!qr) return;
-                if (!groupsByQR[qr]) {
-                    groupsByQR[qr] = [];
-                }
-                groupsByQR[qr].push(event);
-            });
-
-            // Extract the latest event for primary table rows
-            const uniqueLatestEvents = [];
-            Object.keys(groupsByQR).forEach(qr => {
-                const latestEvent = groupsByQR[qr][0];
-                uniqueLatestEvents.push({
-                    latest: latestEvent,
-                    history: groupsByQR[qr]
-                });
-            });
-
-            // Sort primary rows so documents with newest transactions appear first
-            uniqueLatestEvents.sort((a, b) => new Date(b.latest.created_at) - new Date(a.latest.created_at));
-
-            // Filter primary items based on view context
-            let filteredGroups = [];
             if (currentView === 'active') {
-                filteredGroups = uniqueLatestEvents.filter(item => {
-                    const status = (item.latest.status || '').toLowerCase();
-                    return !status.includes('finish') && !status.includes('approve') && !status.includes('archive');
-                });
-            } else if (currentView === 'archived') {
-                filteredGroups = uniqueLatestEvents.filter(item => {
-                    const status = (item.latest.status || '').toLowerCase();
-                    return status.includes('finish') || status.includes('approve') || status.includes('archive');
-                });
-            }
+                // Fetch events, master projects, and list of archived QR codes
+                const [{ data: events, error: eventsErr }, { data: masterDocs }, { data: finishedIDs }] = await Promise.all([
+                    _supabase.from('document_tracking_events').select('*').order('created_at', { ascending: false }),
+                    _supabase.from('combined_routing_logs').select('qr_code, project_name'),
+                    _supabase.from('finished_documents').select('qr_code')
+                ]);
 
-            tbody.innerHTML = '';
+                if (eventsErr) throw eventsErr;
 
-            if (filteredGroups.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">No documents in "${currentView}" queue.</td></tr>`;
-                return;
-            }
-
-            // Render interactive rows
-            filteredGroups.forEach(group => {
-                const mainItem = group.latest;
-                const qrCode = mainItem.parent_qr_code;
-                const projectName = projectMap[qrCode] || '---';
-                const statusStr = (mainItem.status || '').toLowerCase();
+                const nameMap = Object.fromEntries(masterDocs?.map(d => [d.qr_code, d.project_name]) || []);
+                const finishedSet = new Set(finishedIDs?.map(f => f.qr_code));
                 
-                // Determine responsible handler
-                let handler = '---';
-                if (statusStr.includes('picked up')) {
-                    handler = mainItem.picked_up_by || '---';
-                } else {
-                    handler = mainItem.received_by || '---';
-                }
-
-                // Color-code active state badges
-                let badgeClass = 'badge-received';
-                if (statusStr.includes('pick') || statusStr.includes('outgoing') || statusStr.includes('forward')) {
-                    badgeClass = 'badge-pickup';
-                } else if (statusStr.includes('sign') || statusStr.includes('approve')) {
-                    badgeClass = 'badge-signed';
-                } else if (currentView === 'archived') {
-                    badgeClass = 'badge-archive';
-                }
-
-                // Action buttons HTML
-                const actionButtonsHTML = currentView === 'active' 
-                    ? `<div class="action-btn-group">
-                        <button class="action-btn btn-archive" onclick="handleDocumentAction(event, '${qrCode}', 'archive')">Complete</button>
-                       </div>`
-                    : `<span style="color: var(--text-muted); font-size: 0.75rem;">Archived</span>`;
-
-                // Build collapsed timeline HTML
-                let timelineHTML = '';
-                group.history.forEach((histEvent, index) => {
-                    const isNewest = index === 0;
-                    const hStatus = (histEvent.status || '').toLowerCase();
-                    const hHandler = hStatus.includes('picked up') ? (histEvent.picked_up_by || '---') : (histEvent.received_by || '---');
-                    
-                    timelineHTML += `
-                        <div class="timeline-item ${isNewest ? '' : 'old-event'}">
-                            <div class="timeline-dot"></div>
-                            <div class="timeline-content">
-                                <span class="timeline-time">${formatTime(histEvent.created_at)}</span>
-                                <span style="color: var(--text-light); min-width: 180px;">📍 <strong>${histEvent.department || '---'}</strong></span>
-                                <span style="color: ${isNewest ? 'var(--neon-blue)' : 'var(--text-muted)'}; font-weight: 600; min-width: 140px;">${histEvent.status || 'Unknown'}</span>
-                                <span style="color: var(--text-muted);">By: ${hHandler}</span>
-                            </div>
-                        </div>
-                    `;
+                const grouped = {};
+                events?.forEach(s => {
+                    if (finishedSet.has(s.parent_qr_code)) return; // Exclude finished items
+                    if (!grouped[s.parent_qr_code]) grouped[s.parent_qr_code] = [];
+                    grouped[s.parent_qr_code].push(s);
                 });
 
-                // Master row
-                const trMaster = document.createElement('tr');
-                trMaster.className = 'data-row';
-                trMaster.id = `row-master-${qrCode}`;
-                trMaster.onclick = () => toggleHistory(qrCode);
-                trMaster.innerHTML = `
-                    <td style="text-align: center;"><span class="indicator-arrow">▶</span></td>
-                    <td style="color: var(--neon-blue); font-weight: 600;">${formatTime(mainItem.created_at)}</td>
-                    <td style="font-family: monospace; letter-spacing: 0.5px;">${qrCode}</td>
-                    <td style="font-weight: 700; color: #ffffff;">${projectName}</td>
-                    <td><strong>${mainItem.department || '---'}</strong></td>
-                    <td><span class="badge ${badgeClass}">${mainItem.status || 'Unknown'}</span></td>
-                    <td>${handler}</td>
-                    <td style="text-align: center;">${actionButtonsHTML}</td>
-                `;
+                const activeDocs = Object.keys(grouped).map(qr => ({
+                    qr_code: qr,
+                    history: grouped[qr],
+                    latest: grouped[qr][0]
+                })).sort((a, b) => new Date(b.latest.created_at) - new Date(a.latest.created_at));
 
-                // Detail audit row
-                const trDetail = document.createElement('tr');
-                trDetail.className = 'history-row';
-                trDetail.id = `row-detail-${qrCode}`;
-                trDetail.innerHTML = `
-                    <td colspan="8">
-                        <div class="history-container">
-                            <div class="history-title">Document Audit Trail (Newest First)</div>
-                            <div class="timeline">
-                                ${timelineHTML}
+                tbody.innerHTML = '';
+
+                if (activeDocs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">No active documents in queue.</td></tr>';
+                    return;
+                }
+
+                activeDocs.forEach(item => {
+                    const qrCode = item.qr_code;
+                    const mainItem = item.latest;
+                    const projectName = nameMap[qrCode] || "Unknown Project";
+                    const statusStr = (mainItem.status || '').toLowerCase();
+                    const handler = statusStr.includes('picked up') ? (mainItem.picked_up_by || '---') : (mainItem.received_by || '---');
+
+                    let badgeClass = 'badge-received';
+                    if (statusStr.includes('pick') || statusStr.includes('outgoing')) badgeClass = 'badge-pickup';
+                    else if (statusStr.includes('sign') || statusStr.includes('approve')) badgeClass = 'badge-signed';
+
+                    // Collapsed history HTML
+                    let timelineHTML = '';
+                    item.history.forEach((histEvent, idx) => {
+                        const isNewest = idx === 0;
+                        const hStatus = (histEvent.status || '').toLowerCase();
+                        const hHandler = hStatus.includes('picked up') ? (histEvent.picked_up_by || '---') : (histEvent.received_by || '---');
+                        
+                        timelineHTML += `
+                            <div class="timeline-item ${isNewest ? '' : 'old-event'}">
+                                <div class="timeline-dot"></div>
+                                <div class="timeline-content">
+                                    <span class="timeline-time">${formatTime(histEvent.created_at)}</span>
+                                    <span style="color: var(--text-light); min-width: 180px;">📍 <strong>${histEvent.department || '---'}</strong></span>
+                                    <span style="color: ${isNewest ? 'var(--neon-blue)' : 'var(--text-muted)'}; font-weight: 600; min-width: 140px;">${histEvent.status || 'Unknown'}</span>
+                                    <span style="color: var(--text-muted);">By: ${hHandler}</span>
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                `;
+                        `;
+                    });
 
-                tbody.appendChild(trMaster);
-                tbody.appendChild(trDetail);
-            });
+                    const trMaster = document.createElement('tr');
+                    trMaster.className = 'data-row';
+                    trMaster.id = `row-master-${qrCode}`;
+                    trMaster.onclick = () => toggleHistory(qrCode);
+                    trMaster.innerHTML = `
+                        <td style="text-align: center;"><span class="indicator-arrow">▶</span></td>
+                        <td style="color: var(--neon-blue); font-weight: 600;">${formatTime(mainItem.created_at)}</td>
+                        <td style="font-family: monospace; letter-spacing: 0.5px;">${qrCode}</td>
+                        <td style="font-weight: 700; color: #ffffff;">${projectName}</td>
+                        <td><strong>${mainItem.department || '---'}</strong></td>
+                        <td><span class="badge ${badgeClass}">${mainItem.status || 'Unknown'}</span></td>
+                        <td>${handler}</td>
+                        <td style="text-align: center;">
+                            <div class="action-btn-group">
+                                <button class="action-btn" onclick="approveDocument(event, '${qrCode}', '${projectName.replace(/'/g, "\\'")}', '${mainItem.department}')">Finish</button>
+                            </div>
+                        </td>
+                    `;
+
+                    const trDetail = document.createElement('tr');
+                    trDetail.className = 'history-row';
+                    trDetail.id = `row-detail-${qrCode}`;
+                    trDetail.innerHTML = `
+                        <td colspan="8">
+                            <div class="history-container">
+                                <div class="history-title">Document Audit Trail (Newest First)</div>
+                                <div class="timeline">${timelineHTML}</div>
+                            </div>
+                        </td>
+                    `;
+
+                    tbody.appendChild(trMaster);
+                    tbody.appendChild(trDetail);
+                });
+
+            } else {
+                // ARCHIVED VIEW
+                const { data: finished, error } = await _supabase
+                    .from('finished_documents')
+                    .select('*')
+                    .order('completed_at', { ascending: false });
+
+                if (error) throw error;
+                tbody.innerHTML = '';
+
+                if (!finished || finished.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">No archived documents.</td></tr>';
+                    return;
+                }
+
+                finished.forEach(f => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td></td>
+                        <td style="color: var(--neon-purple); font-weight: 600;">${formatTime(f.completed_at)}</td>
+                        <td style="font-family: monospace;">${f.qr_code}</td>
+                        <td style="font-weight: 700; color: #ffffff;">${f.project_name || '---'}</td>
+                        <td><strong>${f.final_department || 'FINAL ARCHIVE'}</strong></td>
+                        <td><span class="badge badge-archive">ARCHIVED</span></td>
+                        <td>${f.approved_by || '---'}</td>
+                        <td style="text-align: center; color: var(--text-muted); font-size: 0.75rem;">Completed</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
 
         } catch (err) {
             console.error("Fetch Error:", err);
@@ -590,14 +557,17 @@
 
     // Set up Realtime listener connection
     function initRealtime() {
-        _supabase.channel('tracking-refresh')
+        _supabase.channel('global-updates')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'finished_documents' }, () => {
+                fetchTrackerData();
+            })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'document_tracking_events' }, () => {
                 fetchTrackerData();
             })
             .subscribe();
     }
 
-    // Fire off initialization
+    // Initialization
     document.addEventListener('DOMContentLoaded', () => {
         fetchTrackerData();
         initRealtime();
