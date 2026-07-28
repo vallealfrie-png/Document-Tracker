@@ -329,33 +329,36 @@
         window.location.href = 'index.html';
     }
 
-    // Mark document as Finished/Archived
-    async function markAsFinished(event, qrCode, currentDept, currentHandler) {
-        event.stopPropagation(); // Prevents row expand click trigger
-        
-        if (!confirm(`Are you sure you want to mark document [${qrCode}] as Finished?`)) {
-            return;
-        }
-
-        try {
-            const { error } = await _supabase
-                .from('document_tracking_events')
-                .insert([{
-                    parent_qr_code: qrCode,
-                    department: currentDept || 'Finished Stage',
-                    status: 'Finished',
-                    received_by: currentHandler || 'System Admin',
-                    created_at: new Date().toISOString()
-                }]);
-
-            if (error) throw error;
-
-            // Instantly reload local table view
-            fetchTrackerData();
-        } catch (err) {
-            alert('Failed to finish document: ' + err.message);
-        }
+    // Mark document as Finished/Archived by inserting an Approved event
+async function markAsFinished(event, qrCode, currentDept, currentHandler) {
+    event.stopPropagation(); // Prevents row expand click trigger
+    
+    // Prompt for the Approver's Name
+    const approverName = prompt(`Enter Approver / Signee name for document [${qrCode}]:`, currentHandler || '');
+    
+    if (!approverName) {
+        return; // User canceled or left blank
     }
+
+    try {
+        const { error } = await _supabase
+            .from('document_tracking_events')
+            .insert([{
+                parent_qr_code: qrCode,
+                department: currentDept || 'Approved Stage',
+                status: 'Approved', // Uses 'Approved' to satisfy the database status check constraint
+                received_by: approverName.trim(),
+                created_at: new Date().toISOString()
+            }]);
+
+        if (error) throw error;
+
+        // Instantly reload local table view
+        fetchTrackerData();
+    } catch (err) {
+        alert('Failed to complete document: ' + err.message);
+    }
+}
 
     // Formats dates reliably
     function formatTime(isoString) {
