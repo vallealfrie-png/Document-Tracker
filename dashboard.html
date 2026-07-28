@@ -161,6 +161,25 @@
         .badge-signed { background: rgba(57, 255, 20, 0.1); color: var(--neon-green); border: 1px solid var(--neon-green); }
         .badge-archive { background: rgba(189, 0, 255, 0.1); color: #d666ff; border: 1px solid var(--neon-purple); }
 
+        /* Finish Action Button */
+        .btn-finish {
+            background: rgba(57, 255, 20, 0.15);
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+        .btn-finish:hover {
+            background: var(--neon-green);
+            color: var(--bg-dark);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
         /* Collapse / Expand Elements */
         .history-row {
             display: none;
@@ -277,11 +296,12 @@
                     <th>Current Department Location</th>
                     <th>Transition Status</th>
                     <th>Handled By</th>
+                    <th style="text-align: center;">Action</th>
                 </tr>
             </thead>
             <tbody id="table-body">
                 <tr>
-                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Initializing active tracks...</td>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">Initializing active tracks...</td>
                 </tr>
             </tbody>
         </table>
@@ -307,6 +327,34 @@
             }
         }
         window.location.href = 'index.html';
+    }
+
+    // Mark document as Finished/Archived
+    async function markAsFinished(event, qrCode, currentDept, currentHandler) {
+        event.stopPropagation(); // Prevents row expand click trigger
+        
+        if (!confirm(`Are you sure you want to mark document [${qrCode}] as Finished?`)) {
+            return;
+        }
+
+        try {
+            const { error } = await _supabase
+                .from('document_tracking_events')
+                .insert([{
+                    parent_qr_code: qrCode,
+                    department: currentDept || 'Finished Stage',
+                    status: 'Finished',
+                    received_by: currentHandler || 'System Admin',
+                    created_at: new Date().toISOString()
+                }]);
+
+            if (error) throw error;
+
+            // Instantly reload local table view
+            fetchTrackerData();
+        } catch (err) {
+            alert('Failed to finish document: ' + err.message);
+        }
     }
 
     // Formats dates reliably
@@ -360,7 +408,7 @@
     // Main tracking query
     async function fetchTrackerData() {
         const tbody = document.getElementById('table-body');
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Scanning real-time transactions...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">Scanning real-time transactions...</td></tr>';
 
         try {
             // Fetch tracking events AND log entries to cross-reference project names
@@ -385,7 +433,7 @@
             }
 
             if (!events || events.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No historical data found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">No historical data found.</td></tr>';
                 return;
             }
 
@@ -430,7 +478,7 @@
             tbody.innerHTML = '';
 
             if (filteredGroups.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No documents in "${currentView}" queue.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">No documents in "${currentView}" queue.</td></tr>`;
                 return;
             }
 
@@ -457,6 +505,12 @@
                     badgeClass = 'badge-signed';
                 } else if (currentView === 'archived') {
                     badgeClass = 'badge-archive';
+                }
+
+                // Action Column Content
+                let actionBtnHTML = '---';
+                if (currentView === 'active') {
+                    actionBtnHTML = `<button class="btn-finish" onclick="markAsFinished(event, '${qrCode}', '${mainItem.department || ''}', '${handler}')">✓ Finish</button>`;
                 }
 
                 // Build collapsed timeline HTML
@@ -492,6 +546,7 @@
                     <td><strong>${mainItem.department || '---'}</strong></td>
                     <td><span class="badge ${badgeClass}">${mainItem.status || 'Unknown'}</span></td>
                     <td>${handler}</td>
+                    <td style="text-align: center;">${actionBtnHTML}</td>
                 `;
 
                 // Detail audit row
@@ -499,7 +554,7 @@
                 trDetail.className = 'history-row';
                 trDetail.id = `row-detail-${qrCode}`;
                 trDetail.innerHTML = `
-                    <td colspan="7">
+                    <td colspan="8">
                         <div class="history-container">
                             <div class="history-title">Document Audit Trail (Newest First)</div>
                             <div class="timeline">
@@ -515,7 +570,7 @@
 
         } catch (err) {
             console.error("Fetch Error:", err);
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #ff4d4d; padding: 30px;">Database communication error: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ff4d4d; padding: 30px;">Database communication error: ${err.message}</td></tr>`;
         }
     }
 
