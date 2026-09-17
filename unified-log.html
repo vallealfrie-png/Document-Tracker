@@ -223,11 +223,11 @@
             box-shadow: 0 0 15px var(--neon);
         }
 
-       /* REVISED PRINTABLE SLIP - STRICT HALF-A4 LANDSCAPE (TOP HALF) */
+       /* REVISED PRINTABLE SLIP - ORIGINAL LOGO SIZE WITH STRICT HALF-A4 LANDSCAPE BOUNDS */
 #printable-slip { 
     background: white; 
     color: #000;
-    padding: 12px 20px 8px 20px; 
+    padding: 10px 20px 6px 20px; 
     display: none; 
     flex-direction: column; 
     width: 210mm;          /* Full A4 width */
@@ -238,21 +238,23 @@
     border-radius: 0;
     margin-top: 0;
     border-bottom: 1px dashed #666; /* Cutting line indicator */
-    justify-content: space-between; /* Keeps top header and bottom slogan anchored */
+    justify-content: space-between; /* Keeps header top and slogan bottom */
 }
 
 .slip-header { 
     width: 100%; 
     display: flex; 
     justify-content: center; 
-    padding-bottom: 6px;
+    padding: 5px 0;
     border-bottom: 3px solid #299c29; 
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
+/* Restored original logo dimensions with width safety */
 .slip-logo { 
+    width: 620px; 
     max-width: 100%; 
-    height: 38px;          /* Scaled down to preserve vertical room */
+    height: auto; 
     object-fit: contain; 
 }
 
@@ -269,19 +271,19 @@
 .details-area { flex: 1; }
 
 #slip-proj { 
-    margin: 0 0 6px 0; 
+    margin: 0 0 4px 0; 
     font-size: 13pt; 
     color: #1a73ba; 
     text-transform: uppercase; 
     font-weight: 800; 
 }
 
-.info-row { font-size: 9pt; margin-bottom: 3px; color: #333; }
-.info-row strong { width: 110px; display: inline-block; color: #111; }
+.info-row { font-size: 8.5pt; margin-bottom: 2px; color: #333; }
+.info-row strong { width: 100px; display: inline-block; color: #111; }
 
 .routing-plan-box {
-    margin-top: 6px;
-    padding: 6px;
+    margin-top: 4px;
+    padding: 4px 6px;
     border: 1px dashed #ccc;
     background: #fafafa;
 }
@@ -290,28 +292,28 @@
 
 .qr-side { text-align: center; padding-left: 15px; }
 .scan-instruction { 
-    font-size: 8pt; 
+    font-size: 7.5pt; 
     font-weight: bold; 
     color: #1a73ba; 
-    margin-bottom: 4px; 
+    margin-bottom: 3px; 
     text-transform: uppercase;
 }
 
-/* Constrained QR code height */
+/* Scaled QR display to accommodate original logo size */
 #qr-target img, #qr-target canvas {
-    width: 110px !important;
-    height: 110px !important;
+    width: 95px !important;
+    height: 95px !important;
     margin: 0 auto;
 }
 
 .hex-display { 
     font-family: monospace; 
-    font-size: 13pt; 
+    font-size: 12pt; 
     font-weight: bold; 
     border: 2px solid #000; 
-    padding: 2px 8px; 
+    padding: 2px 6px; 
     display: inline-block; 
-    margin-top: 4px; 
+    margin-top: 3px; 
     color: #000; 
 }
 
@@ -319,11 +321,11 @@
     text-align: center; 
     font-weight: bold; 
     font-style: italic; 
-    font-size: 10pt;
+    font-size: 9.5pt;
     color: #299c29; 
-    margin-top: 6px; 
-    padding-top: 4px;
-    padding-bottom: 4px;
+    margin-top: 4px; 
+    padding-top: 3px;
+    padding-bottom: 3px;
     border-top: 2px solid #299c29; 
     letter-spacing: 1px;
 }
